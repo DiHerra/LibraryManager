@@ -1,0 +1,78 @@
+# ============================================================
+# Unity: carpetas generadas
+# ============================================================
+
+LibraryManager/[Ll]ibrary/
+LibraryManager/[Tt]emp/
+LibraryManager/[Oo]bj/
+LibraryManager/[Ll]ogs/
+LibraryManager/[Uu]ser[Ss]ettings/
+LibraryManager/[Mm]emoryCaptures/
+LibraryManager/[Rr]ecordings/
+
+# ============================================================
+# Compilaciones
+# ============================================================
+
+Build/
+Builds/
+LibraryManager/Build/
+LibraryManager/Builds/
+
+# ============================================================
+# Visual Studio y Rider
+# ============================================================
+
+.vs/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.opendb
+*.VC.db
+*.mdb
+*.pdb
+*.sln.iml
+
+# ============================================================
+# Sistema operativo
+# ============================================================
+
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Logs y archivos temporales
+# ============================================================
+
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# ============================================================
+# Unity: paquetes y servicios generados
+# ============================================================
+
+LibraryManager/Assets/AssetStoreTools*
+LibraryManager/Assets/StreamingAssets/aa.meta
+LibraryManager/Assets/StreamingAssets/aa/
+
+# ============================================================
+# Tests y cobertura
+# ============================================================
+
+LibraryManager/[Cc]overageResults/
+TestResults/
+
+# Archivos temporales de agentes
+.claude-temp/
+.codex-temp/
