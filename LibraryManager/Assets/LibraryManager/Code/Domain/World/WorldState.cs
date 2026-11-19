@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Economy;
 using LibraryManager.Domain.Store;
@@ -23,13 +24,15 @@ namespace LibraryManager.Domain.World
             GameDate date,
             DeterministicRandom random,
             StoreSchedule schedule,
-            WorldEventQueue events)
+            WorldEventQueue events,
+            BookCatalog catalog)
         {
             Bookstore = Guard.NotNull(bookstore, nameof(bookstore));
             Date = date;
             Random = Guard.NotNull(random, nameof(random));
             Schedule = Guard.NotNull(schedule, nameof(schedule));
             Events = Guard.NotNull(events, nameof(events));
+            Catalog = Guard.NotNull(catalog, nameof(catalog));
         }
 
         public Bookstore Bookstore { get; }
@@ -42,6 +45,9 @@ namespace LibraryManager.Domain.World
 
         public WorldEventQueue Events { get; }
 
+        /// <summary>Títulos, editoriales y distribuidoras del mundo.</summary>
+        public BookCatalog Catalog { get; }
+
         public bool IsOpenToday => Schedule.IsOpen(Date);
 
         public CommercialSeason Season => CommercialCalendar.GetSeason(Date);
@@ -51,12 +57,16 @@ namespace LibraryManager.Domain.World
             var events = new WorldEventQueue();
             ScheduleDefaultRent(events, DefaultStartDate);
 
+            var random = new DeterministicRandom(seed);
+            BookCatalog catalog = CatalogGenerator.Generate(random.NextULong(), DefaultStartDate);
+
             return new WorldState(
                 new Bookstore(bookstoreName, DefaultStartingCash),
                 DefaultStartDate,
-                new DeterministicRandom(seed),
+                random,
                 StoreSchedule.CreateDefault(),
-                events);
+                events,
+                catalog);
         }
 
         /// <summary>Programa el alquiler mensual el día 1 del mes siguiente a <paramref name="from"/>.</summary>

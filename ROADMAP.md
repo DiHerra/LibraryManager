@@ -63,7 +63,7 @@ Avance 2026-11-19 (L01): estructura creada con pruebas EditMode de dinero (4), f
 
 ### L02. Reloj del mundo y calendario
 
-Estado: en curso, pendiente de validación en Unity. Dependencias: L01. Diseño: `docs/design/world-clock.md`.
+Estado: cerrado el 2026-11-19. Dependencias: L01. Diseño: `docs/design/world-clock.md`.
 
 - [x] Fecha del mundo, días de apertura y horario de la tienda (`StoreSchedule`, festivos nacionales fijos).
 - [x] Avance por día con resumen (`DayReport`) y avance hasta el lunes siguiente con resumen de la semana (`AdvanceResult`).
@@ -72,16 +72,23 @@ Estado: en curso, pendiente de validación en Unity. Dependencias: L01. Diseño:
 - [x] Motivos de pausa del avance: evento que pide atención, inicio de temporada y caja en negativo.
 - [x] Guardado versión 2 (horario y eventos) con migración desde la versión 1.
 - [x] Pantalla de la tienda: día, abierto o cerrado, temporada, caja, próximos eventos, «Avanzar día», «Avanzar semana» y resumen del último avance.
-- [ ] Validación en Unity.
+- [x] Validación en Unity.
 
-Avance 2026-11-19 (L02): pruebas nuevas de horario (3), temporadas (11 casos), cola de eventos (5), reloj del mundo (9), guardado de eventos y migración de la versión 1 (2 más 2 casos de datos inválidos) y avance semanal de la sesión (1). Pendiente de compilar y ejecutar en Unity.
+Avance 2026-11-19 (L02): pruebas nuevas de horario (3), temporadas (11 casos), cola de eventos (5), reloj del mundo (9), guardado de eventos y migración de la versión 1 (2 más 2 casos de datos inválidos) y avance semanal de la sesión (1). Validado en Unity por Diego: Test Runner sin fallos, migración de la partida de L01, cobro del alquiler el 1 de octubre y pausa al empezar la Navidad.
 
 ### L03. Modelo de libros y catálogo del mundo
 
-- [ ] Libro: título, autor, editorial, género, formato, PVP, fecha de publicación y fase (novedad o fondo).
-- [ ] Popularidad base, tendencia y vida comercial de cada título.
-- [ ] Editoriales y distribuidoras ficticias con plazos y condiciones.
-- [ ] Generador de catálogo reproducible por semilla (script de contenido como en Volley).
+Estado: en curso, pendiente de validación en Unity. Dependencias: L02. Diseño: `docs/design/book-catalog.md`.
+
+- [x] Libro: título, autor, editorial, género (15), encuadernación (3), PVP, fecha de publicación y fase (próximamente, novedad o fondo).
+- [x] Popularidad base, semivida de la novedad y suelo de fondo; interés del día con `PopularityOn`.
+- [x] Editoriales (tamaño, géneros, descuento) y distribuidoras (plazo, pedido mínimo, plazo de devolución).
+- [x] Generador de catálogo reproducible por semilla: 640 títulos, 20 editoriales, 4 distribuidoras y 260 autores ficticios.
+- [x] Guardado versión 3 con el catálogo completo y migración desde la versión 2.
+- [x] Panel «Ver catálogo» en la tienda: más populares del día por género y próximas novedades.
+- [ ] Validación en Unity.
+
+Avance 2026-11-19 (L03): pruebas nuevas de libro (3), catálogo (3), generador (8) y guardado del catálogo (3). Decisión técnica: el generador vive en el dominio (C#) y no en un script Python con assets como en Volley, porque el catálogo se genera por partida; la partida guarda el catálogo completo para que los cambios del generador no alteren partidas existentes. Pendiente de compilar y ejecutar en Unity.
 
 ### L04. Stock, pedidos y devoluciones
 

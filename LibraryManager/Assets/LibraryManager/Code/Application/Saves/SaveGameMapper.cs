@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Economy;
 using LibraryManager.Domain.Store;
@@ -36,7 +37,8 @@ namespace LibraryManager.Application.Saves
                         closingHour = world.Schedule.ClosingHour
                     },
                     events = world.Events.Pending.Select(ToData).ToList(),
-                    nextEventId = world.Events.NextId
+                    nextEventId = world.Events.NextId,
+                    catalog = ToData(world.Catalog)
                 }
             };
         }
@@ -54,6 +56,84 @@ namespace LibraryManager.Application.Saves
                 pausesAdvance = worldEvent.PausesAdvance,
                 anchorDay = worldEvent.AnchorDay
             };
+        }
+
+        public static CatalogData ToData(BookCatalog catalog)
+        {
+            return new CatalogData
+            {
+                distributors = catalog.Distributors.Select(d => new DistributorData
+                {
+                    id = d.Id,
+                    name = d.Name,
+                    leadTimeDays = d.LeadTimeDays,
+                    minimumOrderCents = d.MinimumOrder.Cents,
+                    returnWindowDays = d.ReturnWindowDays
+                }).ToList(),
+                publishers = catalog.Publishers.Select(p => new PublisherData
+                {
+                    id = p.Id,
+                    name = p.Name,
+                    size = (int)p.Size,
+                    focusGenres = p.FocusGenres.Select(g => (int)g).ToList(),
+                    distributorId = p.DistributorId,
+                    tradeDiscountBasisPoints = p.TradeDiscountBasisPoints
+                }).ToList(),
+                books = catalog.Books.Select(b => new BookData
+                {
+                    id = b.Id,
+                    title = b.Title,
+                    author = b.Author,
+                    publisherId = b.PublisherId,
+                    genre = (int)b.Genre,
+                    format = (int)b.Format,
+                    priceCents = b.Price.Cents,
+                    publicationDayNumber = b.PublicationDate.DayNumber,
+                    basePopularity = b.BasePopularity,
+                    halfLifeDays = b.HalfLifeDays,
+                    backlistFloorPercent = b.BacklistFloorPercent
+                }).ToList()
+            };
+        }
+
+        public static BookCatalog ToCatalog(CatalogData data)
+        {
+            if (data == null || data.distributors == null || data.publishers == null || data.books == null)
+            {
+                throw new ArgumentException("La partida no contiene el catálogo.");
+            }
+
+            return new BookCatalog(
+                data.distributors.Select(d => new Distributor(d.id, d.name, d.leadTimeDays, new Money(d.minimumOrderCents), d.returnWindowDays)),
+                data.publishers.Select(p => new Publisher(
+                    p.id,
+                    p.name,
+                    ToEnum<PublisherSize>(p.size),
+                    (p.focusGenres ?? new System.Collections.Generic.List<int>()).Select(ToEnum<Genre>),
+                    p.distributorId,
+                    p.tradeDiscountBasisPoints)),
+                data.books.Select(b => new Book(
+                    b.id,
+                    b.title,
+                    b.author,
+                    b.publisherId,
+                    ToEnum<Genre>(b.genre),
+                    ToEnum<BookFormat>(b.format),
+                    new Money(b.priceCents),
+                    GameDate.FromDayNumber(b.publicationDayNumber),
+                    b.basePopularity,
+                    b.halfLifeDays,
+                    b.backlistFloorPercent)));
+        }
+
+        private static T ToEnum<T>(int value) where T : struct, Enum
+        {
+            if (!Enum.IsDefined(typeof(T), value))
+            {
+                throw new ArgumentException($"Valor {value} no válido para {typeof(T).Name}.");
+            }
+
+            return (T)(object)value;
         }
 
         public static WorldState ToWorld(SaveGameData data)
@@ -79,13 +159,15 @@ namespace LibraryManager.Application.Saves
                     world.schedule.openingHour,
                     world.schedule.closingHour);
                 var events = new WorldEventQueue(world.events.Select(ToEvent), world.nextEventId);
+                BookCatalog catalog = ToCatalog(world.catalog);
 
                 return new WorldState(
                     bookstore,
                     GameDate.FromDayNumber(world.dateDayNumber),
                     DeterministicRandom.FromState(randomState),
                     schedule,
-                    events);
+                    events,
+                    catalog);
             }
             catch (ArgumentException exception)
             {

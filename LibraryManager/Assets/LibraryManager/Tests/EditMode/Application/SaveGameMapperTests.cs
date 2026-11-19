@@ -23,6 +23,56 @@ namespace LibraryManager.Tests.EditMode.Application
             Assert.AreEqual(world.Events.NextId, loaded.Events.NextId);
             Assert.AreEqual(world.Events.Pending.Count, loaded.Events.Pending.Count);
             Assert.AreEqual(world.Schedule.OpenDays, loaded.Schedule.OpenDays);
+            Assert.AreEqual(world.Catalog.Books.Count, loaded.Catalog.Books.Count);
+        }
+
+        [Test]
+        public void RoundTrip_KeepsTheCatalog()
+        {
+            WorldState world = WorldState.CreateNew("Libros", 31);
+            WorldState loaded = SaveGameMapper.ToWorld(SaveGameMapper.ToData(world, new FixedClock().UtcNow));
+
+            for (int i = 0; i < world.Catalog.Books.Count; i += 37)
+            {
+                var original = world.Catalog.Books[i];
+                var copy = loaded.Catalog.GetBook(original.Id);
+                Assert.AreEqual(original.Title, copy.Title);
+                Assert.AreEqual(original.Author, copy.Author);
+                Assert.AreEqual(original.Price, copy.Price);
+                Assert.AreEqual(original.PublicationDate, copy.PublicationDate);
+                Assert.AreEqual(original.PopularityOn(world.Date), copy.PopularityOn(world.Date));
+            }
+
+            var publisher = world.Catalog.Publishers[3];
+            Assert.AreEqual(publisher.FocusGenres, loaded.Catalog.GetPublisher(publisher.Id).FocusGenres);
+            Assert.AreEqual(world.Catalog.Distributors[0].LeadTimeDays, loaded.Catalog.Distributors[0].LeadTimeDays);
+        }
+
+        [Test]
+        public void VersionTwo_IsMigratedWithAGeneratedCatalog()
+        {
+            SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.schemaVersion = 2;
+            data.world.catalog = null;
+            string randomState = data.world.randomState;
+
+            WorldState world = SaveGameMapper.ToWorld(data);
+
+            Assert.AreEqual(3, data.schemaVersion);
+            Assert.That(world.Catalog.Books.Count, Is.GreaterThanOrEqualTo(600));
+            Assert.AreEqual(randomState, world.Random.State.ToString(System.Globalization.CultureInfo.InvariantCulture), "La migración no consume el generador de la partida.");
+        }
+
+        [Test]
+        public void CorruptCatalog_IsRejected()
+        {
+            SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.world.catalog.books[0].publisherId = 999;
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+
+            data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.world.catalog.books[0].genre = 99;
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
         }
 
         [Test]

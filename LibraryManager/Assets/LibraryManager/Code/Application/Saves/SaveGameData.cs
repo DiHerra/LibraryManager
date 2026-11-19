@@ -28,6 +28,54 @@ namespace LibraryManager.Application.Saves
         public ScheduleData schedule;
         public List<WorldEventData> events = new List<WorldEventData>();
         public long nextEventId;
+
+        // Versión 3 (L03)
+        public CatalogData catalog;
+    }
+
+    [Serializable]
+    public sealed class CatalogData
+    {
+        public List<DistributorData> distributors = new List<DistributorData>();
+        public List<PublisherData> publishers = new List<PublisherData>();
+        public List<BookData> books = new List<BookData>();
+    }
+
+    [Serializable]
+    public sealed class DistributorData
+    {
+        public int id;
+        public string name;
+        public int leadTimeDays;
+        public long minimumOrderCents;
+        public int returnWindowDays;
+    }
+
+    [Serializable]
+    public sealed class PublisherData
+    {
+        public int id;
+        public string name;
+        public int size;
+        public List<int> focusGenres = new List<int>();
+        public int distributorId;
+        public int tradeDiscountBasisPoints;
+    }
+
+    [Serializable]
+    public sealed class BookData
+    {
+        public int id;
+        public string title;
+        public string author;
+        public int publisherId;
+        public int genre;
+        public int format;
+        public long priceCents;
+        public int publicationDayNumber;
+        public int basePopularity;
+        public int halfLifeDays;
+        public int backlistFloorPercent;
     }
 
     [Serializable]

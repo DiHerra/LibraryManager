@@ -1,4 +1,6 @@
-using System.Collections.Generic;
+using System.Globalization;
+using LibraryManager.Domain.Catalog;
+using LibraryManager.Domain.Common;
 using System.Linq;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
@@ -39,6 +41,11 @@ namespace LibraryManager.Application.Saves
                 MigrateV1ToV2(data);
             }
 
+            if (data.schemaVersion == 2)
+            {
+                MigrateV2ToV3(data);
+            }
+
             return data;
         }
 
@@ -58,6 +65,23 @@ namespace LibraryManager.Application.Saves
             data.world.events = events.Pending.Select(SaveGameMapper.ToData).ToList();
             data.world.nextEventId = events.NextId;
             data.schemaVersion = 2;
+        }
+
+        /// <summary>
+        /// Genera el catálogo con una semilla derivada del estado del generador de la
+        /// partida (sin consumirlo) y con la fecha de la partida como referencia.
+        /// </summary>
+        private static void MigrateV2ToV3(SaveGameData data)
+        {
+            if (!ulong.TryParse(data.world.randomState, NumberStyles.None, CultureInfo.InvariantCulture, out ulong state))
+            {
+                throw new SaveGameException("El estado del generador aleatorio no es válido.");
+            }
+
+            ulong catalogSeed = new DeterministicRandom(state ^ 0x5EED_CA7A_1060_0003UL).NextULong();
+            BookCatalog catalog = CatalogGenerator.Generate(catalogSeed, GameDate.FromDayNumber(data.world.dateDayNumber));
+            data.world.catalog = SaveGameMapper.ToData(catalog);
+            data.schemaVersion = 3;
         }
     }
 }

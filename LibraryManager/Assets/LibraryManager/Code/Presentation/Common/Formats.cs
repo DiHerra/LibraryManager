@@ -1,4 +1,5 @@
 using System.Globalization;
+using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Economy;
 using LibraryManager.Domain.Time;
 
@@ -66,6 +67,49 @@ namespace LibraryManager.Presentation.Common
                     return "¡La caja está en negativo!";
                 default:
                     return reason.Detail;
+            }
+        }
+
+        public static string Genre(Genre genre)
+        {
+            switch (genre)
+            {
+                case Domain.Catalog.Genre.Fiction: return "Narrativa";
+                case Domain.Catalog.Genre.Crime: return "Novela negra";
+                case Domain.Catalog.Genre.Fantasy: return "Fantasía";
+                case Domain.Catalog.Genre.ScienceFiction: return "Ciencia ficción";
+                case Domain.Catalog.Genre.Romance: return "Romántica";
+                case Domain.Catalog.Genre.Historical: return "Novela histórica";
+                case Domain.Catalog.Genre.Children: return "Infantil";
+                case Domain.Catalog.Genre.YoungAdult: return "Juvenil";
+                case Domain.Catalog.Genre.Comics: return "Cómic";
+                case Domain.Catalog.Genre.Essay: return "Ensayo";
+                case Domain.Catalog.Genre.SelfHelp: return "Autoayuda";
+                case Domain.Catalog.Genre.Cooking: return "Cocina";
+                case Domain.Catalog.Genre.Travel: return "Viajes";
+                case Domain.Catalog.Genre.Poetry: return "Poesía";
+                case Domain.Catalog.Genre.School: return "Texto escolar";
+                default: return genre.ToString();
+            }
+        }
+
+        public static string Format(BookFormat format)
+        {
+            switch (format)
+            {
+                case BookFormat.Hardcover: return "Tapa dura";
+                case BookFormat.Pocket: return "Bolsillo";
+                default: return "Rústica";
+            }
+        }
+
+        public static string Phase(BookPhase phase)
+        {
+            switch (phase)
+            {
+                case BookPhase.Upcoming: return "Próximamente";
+                case BookPhase.NewRelease: return "Novedad";
+                default: return "Fondo";
             }
         }
 

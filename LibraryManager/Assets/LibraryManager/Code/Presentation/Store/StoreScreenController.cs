@@ -3,6 +3,7 @@ using System.Linq;
 using LibraryManager.Application.Game;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
+using LibraryManager.Presentation.Catalog;
 using LibraryManager.Presentation.Common;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,6 +25,8 @@ namespace LibraryManager.Presentation.Store
         private VisualElement _upcoming;
         private Label _summary;
         private Label _status;
+        private VisualElement _storeCard;
+        private CatalogPanel _catalog;
 
         private GameSession Session => GameServices.Session;
 
@@ -36,7 +39,12 @@ namespace LibraryManager.Presentation.Store
                 return;
             }
 
-            VisualElement card = Ui.Screen(GetComponent<UIDocument>().rootVisualElement);
+            VisualElement root = GetComponent<UIDocument>().rootVisualElement;
+            VisualElement card = Ui.Screen(root);
+            _storeCard = card;
+            _catalog = new CatalogPanel(() => Session.World, ShowStore);
+            _catalog.Root.style.display = DisplayStyle.None;
+            root.Add(_catalog.Root);
             _name = Ui.Title(string.Empty);
             card.Add(_name);
             _date = Ui.Text(string.Empty, 20);
@@ -55,6 +63,7 @@ namespace LibraryManager.Presentation.Store
 
             card.Add(Ui.Button("Avanzar día", () => Session.AdvanceDay()));
             card.Add(Ui.Button("Avanzar semana", () => Session.AdvanceWeek()));
+            card.Add(Ui.Button("Ver catálogo", ShowCatalog));
             card.Add(Ui.Button("Guardar", Save));
             card.Add(Ui.Button("Guardar y volver al menú", SaveAndExit));
 
@@ -125,6 +134,19 @@ namespace LibraryManager.Presentation.Store
 
             lines.AddRange(result.PauseReasons.Select(Formats.PauseReason));
             return string.Join("\n", lines);
+        }
+
+        private void ShowCatalog()
+        {
+            _catalog.Refresh();
+            _storeCard.style.display = DisplayStyle.None;
+            _catalog.Root.style.display = DisplayStyle.Flex;
+        }
+
+        private void ShowStore()
+        {
+            _catalog.Root.style.display = DisplayStyle.None;
+            _storeCard.style.display = DisplayStyle.Flex;
         }
 
         private void Save()
