@@ -1,0 +1,14 @@
+{
+    "name": "LibraryManager.Presentation",
+    "rootNamespace": "LibraryManager.Presentation",
+    "references": ["LibraryManager.Domain", "LibraryManager.Application", "LibraryManager.Infrastructure"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

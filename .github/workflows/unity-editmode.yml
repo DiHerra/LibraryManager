@@ -1,0 +1,50 @@
+name: Unity EditMode
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unity-editmode-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  editmode:
+    name: Compile and run EditMode
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - unity
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify Unity project
+        shell: powershell
+        run: |
+          $arguments = @("-SkipDotNetBuild")
+
+          if (-not [string]::IsNullOrWhiteSpace($env:UNITY_EDITOR_PATH)) {
+            $arguments += @("-UnityPath", $env:UNITY_EDITOR_PATH)
+          }
+
+          & .\scripts\Verify.ps1 @arguments
+
+      - name: Upload Unity test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-editmode-${{ github.run_number }}
+          path: TestResults/Verification/**
+          if-no-files-found: warn
+          retention-days: 14

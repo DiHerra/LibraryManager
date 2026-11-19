@@ -1,0 +1,14 @@
+{
+    "name": "LibraryManager.Editor",
+    "rootNamespace": "LibraryManager.Editor",
+    "references": ["LibraryManager.Domain", "LibraryManager.Application", "LibraryManager.Infrastructure", "LibraryManager.Presentation"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,14 @@
+{
+    "name": "LibraryManager.Application",
+    "rootNamespace": "LibraryManager.Application",
+    "references": ["LibraryManager.Domain"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
