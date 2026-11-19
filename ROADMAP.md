@@ -46,7 +46,7 @@ Decisión de enfoque (Diego, 2026-11-19): **gestión primero, historia después*
 
 ### L01. Proyecto verificable y arquitectura
 
-Estado: en curso, pendiente de validación en Unity. Prioridad: crítica. Dependencias: ninguna.
+Estado: cerrado el 2026-11-19. Prioridad: crítica. Dependencias: ninguna.
 
 - [x] Proyecto Unity 6000.3.19f1 con URP 2D, UI Toolkit e Input System (plantilla Universal 2D).
 - [x] Assemblies `Domain` y `Application` sin UnityEngine, más `Infrastructure`, `Presentation`, `Editor`, `Tests.EditMode`, `Tests.PlayMode` y `Tests.Statistical`.
@@ -57,17 +57,24 @@ Estado: en curso, pendiente de validación en Unity. Prioridad: crítica. Depend
 - [x] Menú del editor «Library Manager > Configurar escenas base» que crea `MainMenu`, `Store`, el PanelSettings y la lista de escenas de la build.
 - [x] `scripts/Verify.ps1` y workflow de CI EditMode para el runner Windows propio.
 - [x] ADR-0001 de arquitectura, ADR-0002 de alcance 1.0 y ADR-0003 de enfoque.
-- [ ] Validación en Unity: compila, Test Runner EditMode sin fallos y recorrido nueva partida → avanzar día → guardar → continuar.
+- [x] Validación en Unity: compila, Test Runner EditMode sin fallos y recorrido nueva partida → avanzar día → guardar → continuar.
 
-Avance 2026-11-19 (L01): estructura creada con pruebas EditMode de dinero (4), fechas (4), generador (4), mundo y librería (4), compuerta (3), conversión de guardado (4), sesión (3) y repositorio JSON (3). Pendiente de compilar y ejecutar en Unity.
+Avance 2026-11-19 (L01): estructura creada con pruebas EditMode de dinero (4), fechas (4), generador (4), mundo y librería (4), compuerta (3), conversión de guardado (4), sesión (3) y repositorio JSON (3). Validado en Unity por Diego: Test Runner sin fallos y recorrido del menú y la tienda correcto. Corrección durante la validación: la escena Store se guardaba sin PanelSettings (Unity lo descargaba al abrir la segunda escena) y se veía la pantalla azul; el menú del editor carga el asset después de abrir cada escena.
 
 ### L02. Reloj del mundo y calendario
 
-- [ ] Fecha del mundo, días de apertura y horario de la tienda.
-- [ ] Avance por día con resumen al cierre y resumen semanal.
-- [ ] Cola de eventos fechados (pedidos que llegan, pagos, campañas).
-- [ ] Temporadas comerciales: vuelta al cole, Navidad, Sant Jordi / Día del Libro, verano.
-- [ ] Motivos de pausa del avance (pedido recibido, falta de caja, evento).
+Estado: en curso, pendiente de validación en Unity. Dependencias: L01. Diseño: `docs/design/world-clock.md`.
+
+- [x] Fecha del mundo, días de apertura y horario de la tienda (`StoreSchedule`, festivos nacionales fijos).
+- [x] Avance por día con resumen (`DayReport`) y avance hasta el lunes siguiente con resumen de la semana (`AdvanceResult`).
+- [x] Cola de eventos fechados con repetición semanal y mensual (`WorldEventQueue`); alquiler mensual de 1.800 € desde el 1 de octubre.
+- [x] Temporadas comerciales: vuelta al cole, Navidad, Día del Libro, verano, con multiplicador de demanda provisional.
+- [x] Motivos de pausa del avance: evento que pide atención, inicio de temporada y caja en negativo.
+- [x] Guardado versión 2 (horario y eventos) con migración desde la versión 1.
+- [x] Pantalla de la tienda: día, abierto o cerrado, temporada, caja, próximos eventos, «Avanzar día», «Avanzar semana» y resumen del último avance.
+- [ ] Validación en Unity.
+
+Avance 2026-11-19 (L02): pruebas nuevas de horario (3), temporadas (11 casos), cola de eventos (5), reloj del mundo (9), guardado de eventos y migración de la versión 1 (2 más 2 casos de datos inválidos) y avance semanal de la sesión (1). Pendiente de compilar y ejecutar en Unity.
 
 ### L03. Modelo de libros y catálogo del mundo
 

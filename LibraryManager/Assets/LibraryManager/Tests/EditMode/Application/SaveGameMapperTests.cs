@@ -20,6 +20,61 @@ namespace LibraryManager.Tests.EditMode.Application
             Assert.AreEqual(world.Bookstore.Cash, loaded.Bookstore.Cash);
             Assert.AreEqual(world.Date, loaded.Date);
             Assert.AreEqual(world.Random.NextULong(), loaded.Random.NextULong());
+            Assert.AreEqual(world.Events.NextId, loaded.Events.NextId);
+            Assert.AreEqual(world.Events.Pending.Count, loaded.Events.Pending.Count);
+            Assert.AreEqual(world.Schedule.OpenDays, loaded.Schedule.OpenDays);
+        }
+
+        [Test]
+        public void RoundTrip_KeepsEventDetails()
+        {
+            WorldState world = WorldState.CreateNew("Libros", 1);
+            world.Events.Schedule(
+                LibraryManager.Domain.Time.GameDate.Create(2027, 1, 31),
+                LibraryManager.Domain.Time.WorldEventKind.Payment,
+                "Cuota",
+                LibraryManager.Domain.Economy.Money.FromEuros(12.5m),
+                LibraryManager.Domain.Time.EventRecurrence.Monthly,
+                pausesAdvance: true);
+
+            WorldState loaded = SaveGameMapper.ToWorld(SaveGameMapper.ToData(world, new FixedClock().UtcNow));
+
+            var original = world.Events.Pending[1];
+            var copy = loaded.Events.Pending[1];
+            Assert.AreEqual(original.Id, copy.Id);
+            Assert.AreEqual(original.Date, copy.Date);
+            Assert.AreEqual(original.Kind, copy.Kind);
+            Assert.AreEqual(original.Title, copy.Title);
+            Assert.AreEqual(original.Amount, copy.Amount);
+            Assert.AreEqual(original.Recurrence, copy.Recurrence);
+            Assert.AreEqual(original.PausesAdvance, copy.PausesAdvance);
+            Assert.AreEqual(original.AnchorDay, copy.AnchorDay);
+        }
+
+        [Test]
+        public void VersionOne_IsMigratedWithDefaultScheduleAndRent()
+        {
+            var data = new SaveGameData
+            {
+                schemaVersion = 1,
+                savedAtUtc = "2026-11-19T18:00:00.0000000Z",
+                world = new WorldData
+                {
+                    dateDayNumber = LibraryManager.Domain.Time.GameDate.Create(2026, 9, 10).DayNumber,
+                    randomState = "123",
+                    bookstore = new BookstoreData { name = "Antigua", cashCents = 500000 },
+                    schedule = null,
+                    events = null
+                }
+            };
+
+            WorldState world = SaveGameMapper.ToWorld(data);
+
+            Assert.AreEqual(SaveGameSchema.CurrentVersion, data.schemaVersion);
+            Assert.AreEqual(6, world.Schedule.OpenDays.Count);
+            Assert.AreEqual(LibraryManager.Domain.Time.GameDate.Create(2026, 10, 1), world.Events.Pending[0].Date);
+            Assert.AreEqual(WorldState.RentTitle, world.Events.Pending[0].Title);
+            Assert.AreEqual(500000, world.Bookstore.Cash.Cents);
         }
 
         [Test]
@@ -49,6 +104,14 @@ namespace LibraryManager.Tests.EditMode.Application
 
             data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 1), new FixedClock().UtcNow);
             data.world.randomState = "no es un número";
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+
+            data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 1), new FixedClock().UtcNow);
+            data.world.events[0].kind = 99;
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+
+            data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 1), new FixedClock().UtcNow);
+            data.world.schedule.openDays.Clear();
             Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
         }
     }

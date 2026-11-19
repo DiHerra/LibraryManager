@@ -31,7 +31,7 @@ namespace LibraryManager.Tests.EditMode.Application
         {
             var session = new GameSession(new InMemorySaveGameRepository(), new FixedClock());
 
-            Assert.Throws<InvalidOperationException>(session.AdvanceDay);
+            Assert.Throws<InvalidOperationException>(() => session.AdvanceDay());
             Assert.Throws<InvalidOperationException>(session.Save);
             Assert.IsFalse(session.IsBusy, "La compuerta se libera aunque la operación falle.");
         }
@@ -47,6 +47,18 @@ namespace LibraryManager.Tests.EditMode.Application
             session.AdvanceDay();
 
             Assert.AreEqual(1, notifications);
+        }
+
+        [Test]
+        public void AdvanceWeek_ReturnsTheDaysAndKeepsThemAsLastAdvance()
+        {
+            var session = new GameSession(new InMemorySaveGameRepository(), new FixedClock());
+            session.StartNew("Libros", 1);
+
+            var result = session.AdvanceWeek();
+
+            Assert.AreEqual(6, result.Days.Count);
+            Assert.AreSame(result, session.LastAdvance);
         }
     }
 }

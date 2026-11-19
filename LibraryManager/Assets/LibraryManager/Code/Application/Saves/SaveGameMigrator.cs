@@ -1,3 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
+using LibraryManager.Domain.Time;
+using LibraryManager.Domain.World;
+
 namespace LibraryManager.Application.Saves
 {
     /// <summary>
@@ -24,8 +29,35 @@ namespace LibraryManager.Application.Saves
                 throw new SaveGameException($"La versión de partida {data.schemaVersion} no es válida.");
             }
 
-            // Cuando exista la versión 2: if (data.schemaVersion == 1) { MigrateV1ToV2(data); }
+            if (data.world == null)
+            {
+                throw new SaveGameException("La partida no contiene el mundo.");
+            }
+
+            if (data.schemaVersion == 1)
+            {
+                MigrateV1ToV2(data);
+            }
+
             return data;
+        }
+
+        /// <summary>Añade el horario por defecto y el alquiler mensual desde el mes siguiente.</summary>
+        private static void MigrateV1ToV2(SaveGameData data)
+        {
+            StoreSchedule schedule = StoreSchedule.CreateDefault();
+            data.world.schedule = new ScheduleData
+            {
+                openDays = schedule.OpenDays.Select(day => (int)day).ToList(),
+                openingHour = schedule.OpeningHour,
+                closingHour = schedule.ClosingHour
+            };
+
+            var events = new WorldEventQueue();
+            WorldState.ScheduleDefaultRent(events, GameDate.FromDayNumber(data.world.dateDayNumber));
+            data.world.events = events.Pending.Select(SaveGameMapper.ToData).ToList();
+            data.world.nextEventId = events.NextId;
+            data.schemaVersion = 2;
         }
     }
 }

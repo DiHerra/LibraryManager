@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace LibraryManager.Application.Saves
 {
@@ -22,6 +23,11 @@ namespace LibraryManager.Application.Saves
         /// <summary>Estado del generador como texto: JSON no representa bien ulong grandes.</summary>
         public string randomState;
         public BookstoreData bookstore = new BookstoreData();
+
+        // Versión 2 (L02)
+        public ScheduleData schedule;
+        public List<WorldEventData> events = new List<WorldEventData>();
+        public long nextEventId;
     }
 
     [Serializable]
@@ -29,5 +35,27 @@ namespace LibraryManager.Application.Saves
     {
         public string name;
         public long cashCents;
+    }
+
+    [Serializable]
+    public sealed class ScheduleData
+    {
+        /// <summary>Días de apertura como System.DayOfWeek (0 = domingo).</summary>
+        public List<int> openDays = new List<int>();
+        public int openingHour;
+        public int closingHour;
+    }
+
+    [Serializable]
+    public sealed class WorldEventData
+    {
+        public long id;
+        public int dayNumber;
+        public int kind;
+        public string title;
+        public long amountCents;
+        public int recurrence;
+        public bool pausesAdvance;
+        public int anchorDay;
     }
 }
