@@ -29,9 +29,10 @@ namespace LibraryManager.Editor
                 return;
             }
 
-            PanelSettings panelSettings = EnsurePanelSettings();
-            string mainMenuPath = EnsureScene(SceneNames.MainMenu, typeof(MainMenuController), panelSettings);
-            string storePath = EnsureScene(SceneNames.Store, typeof(StoreScreenController), panelSettings);
+            EnsurePanelSettings();
+            AssetDatabase.SaveAssets();
+            string mainMenuPath = EnsureScene(SceneNames.MainMenu, typeof(MainMenuController));
+            string storePath = EnsureScene(SceneNames.Store, typeof(StoreScreenController));
 
             EditorBuildSettings.scenes = new[]
             {
@@ -44,7 +45,7 @@ namespace LibraryManager.Editor
             Debug.Log("Library Manager: escenas MainMenu y Store configuradas y añadidas a la build.");
         }
 
-        private static PanelSettings EnsurePanelSettings()
+        private static void EnsurePanelSettings()
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ThemePath));
 
@@ -66,10 +67,9 @@ namespace LibraryManager.Editor
 
             panelSettings.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(ThemePath);
             EditorUtility.SetDirty(panelSettings);
-            return panelSettings;
         }
 
-        private static string EnsureScene(string sceneName, System.Type controllerType, PanelSettings panelSettings)
+        private static string EnsureScene(string sceneName, System.Type controllerType)
         {
             Directory.CreateDirectory(ScenesFolder);
             string path = $"{ScenesFolder}/{sceneName}.unity";
@@ -91,7 +91,13 @@ namespace LibraryManager.Editor
                 document = screen.AddComponent<UIDocument>();
             }
 
-            document.panelSettings = panelSettings;
+            // Se carga después de abrir la escena: al cambiar de escena Unity descarga los
+            // assets sin referencias y una referencia guardada antes quedaría vacía.
+            document.panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            if (document.panelSettings == null)
+            {
+                throw new System.InvalidOperationException($"No se pudo cargar '{PanelSettingsPath}'.");
+            }
 
             if (screen.GetComponent(controllerType) == null)
             {
