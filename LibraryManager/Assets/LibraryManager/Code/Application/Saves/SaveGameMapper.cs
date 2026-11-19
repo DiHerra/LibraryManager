@@ -4,6 +4,8 @@ using System.Linq;
 using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Economy;
+using LibraryManager.Domain.Purchasing;
+using LibraryManager.Domain.Stock;
 using LibraryManager.Domain.Store;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
@@ -36,9 +38,12 @@ namespace LibraryManager.Application.Saves
                         openingHour = world.Schedule.OpeningHour,
                         closingHour = world.Schedule.ClosingHour
                     },
-                    events = world.Events.Pending.Select(ToData).ToList(),
+                    events = world.Events.Pending.Select(item => ToData(item)).ToList(),
                     nextEventId = world.Events.NextId,
-                    catalog = ToData(world.Catalog)
+                    catalog = ToData(world.Catalog),
+                    stock = world.Inventory.Lots.Select(item => ToData(item)).ToList(),
+                    orders = world.Orders.All.Select(item => ToData(item)).ToList(),
+                    nextOrderId = world.Orders.NextId
                 }
             };
         }
@@ -54,8 +59,76 @@ namespace LibraryManager.Application.Saves
                 amountCents = worldEvent.Amount.Cents,
                 recurrence = (int)worldEvent.Recurrence,
                 pausesAdvance = worldEvent.PausesAdvance,
-                anchorDay = worldEvent.AnchorDay
+                anchorDay = worldEvent.AnchorDay,
+                referenceId = worldEvent.ReferenceId
             };
+        }
+
+        public static StockLotData ToData(StockLot lot)
+        {
+            return new StockLotData
+            {
+                bookId = lot.BookId,
+                quantity = lot.Quantity,
+                unitCostCents = lot.UnitCost.Cents,
+                receivedDayNumber = lot.ReceivedDate.DayNumber,
+                returnDeadlineDayNumber = lot.ReturnDeadline?.DayNumber ?? -1
+            };
+        }
+
+        public static PurchaseOrderData ToData(PurchaseOrder order)
+        {
+            return new PurchaseOrderData
+            {
+                id = order.Id,
+                distributorId = order.DistributorId,
+                orderDayNumber = order.OrderDate.DayNumber,
+                expectedDayNumber = order.ExpectedDate.DayNumber,
+                status = (int)order.Status,
+                lines = order.Lines.Select(line => new OrderLineData
+                {
+                    bookId = line.BookId,
+                    quantity = line.Quantity,
+                    unitCostCents = line.UnitCost.Cents
+                }).ToList()
+            };
+        }
+
+        private static StockLot ToLot(StockLotData data, BookCatalog catalog)
+        {
+            if (data == null)
+            {
+                throw new ArgumentException("Hay un lote vacío.");
+            }
+
+            catalog.GetBook(data.bookId);
+            return new StockLot(
+                data.bookId,
+                data.quantity,
+                new Money(data.unitCostCents),
+                GameDate.FromDayNumber(data.receivedDayNumber),
+                data.returnDeadlineDayNumber >= 0 ? GameDate.FromDayNumber(data.returnDeadlineDayNumber) : (GameDate?)null);
+        }
+
+        private static PurchaseOrder ToOrder(PurchaseOrderData data, BookCatalog catalog)
+        {
+            if (data == null || data.lines == null)
+            {
+                throw new ArgumentException("Hay un pedido vacío.");
+            }
+
+            catalog.GetDistributor(data.distributorId);
+            return new PurchaseOrder(
+                data.id,
+                data.distributorId,
+                data.lines.Select(line =>
+                {
+                    catalog.GetBook(line.bookId);
+                    return new OrderLine(line.bookId, line.quantity, new Money(line.unitCostCents));
+                }),
+                GameDate.FromDayNumber(data.orderDayNumber),
+                GameDate.FromDayNumber(data.expectedDayNumber),
+                ToEnum<PurchaseOrderStatus>(data.status));
         }
 
         public static CatalogData ToData(BookCatalog catalog)
@@ -160,6 +233,13 @@ namespace LibraryManager.Application.Saves
                     world.schedule.closingHour);
                 var events = new WorldEventQueue(world.events.Select(ToEvent), world.nextEventId);
                 BookCatalog catalog = ToCatalog(world.catalog);
+                if (world.stock == null || world.orders == null)
+                {
+                    throw new ArgumentException("Faltan el inventario o los pedidos.");
+                }
+
+                var inventory = new Inventory(world.stock.Select(lot => ToLot(lot, catalog)).ToList());
+                var orders = new PurchaseOrderBook(world.orders.Select(order => ToOrder(order, catalog)).ToList(), world.nextOrderId);
 
                 return new WorldState(
                     bookstore,
@@ -167,11 +247,17 @@ namespace LibraryManager.Application.Saves
                     DeterministicRandom.FromState(randomState),
                     schedule,
                     events,
-                    catalog);
+                    catalog,
+                    inventory,
+                    orders);
             }
             catch (ArgumentException exception)
             {
                 throw new SaveGameException("La partida contiene datos no válidos: " + exception.Message, exception);
+            }
+            catch (System.Collections.Generic.KeyNotFoundException exception)
+            {
+                throw new SaveGameException("La partida hace referencia a algo que no existe: " + exception.Message, exception);
             }
         }
 
@@ -205,7 +291,8 @@ namespace LibraryManager.Application.Saves
                 new Money(data.amountCents),
                 (EventRecurrence)data.recurrence,
                 data.pausesAdvance,
-                data.anchorDay);
+                data.anchorDay,
+                data.referenceId);
         }
     }
 }

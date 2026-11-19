@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Globalization;
 using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
+using LibraryManager.Domain.Purchasing;
 using System.Linq;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
@@ -46,6 +48,11 @@ namespace LibraryManager.Application.Saves
                 MigrateV2ToV3(data);
             }
 
+            if (data.schemaVersion == 3)
+            {
+                MigrateV3ToV4(data);
+            }
+
             return data;
         }
 
@@ -62,7 +69,7 @@ namespace LibraryManager.Application.Saves
 
             var events = new WorldEventQueue();
             WorldState.ScheduleDefaultRent(events, GameDate.FromDayNumber(data.world.dateDayNumber));
-            data.world.events = events.Pending.Select(SaveGameMapper.ToData).ToList();
+            data.world.events = events.Pending.Select(item => SaveGameMapper.ToData(item)).ToList();
             data.world.nextEventId = events.NextId;
             data.schemaVersion = 2;
         }
@@ -82,6 +89,31 @@ namespace LibraryManager.Application.Saves
             BookCatalog catalog = CatalogGenerator.Generate(catalogSeed, GameDate.FromDayNumber(data.world.dateDayNumber));
             data.world.catalog = SaveGameMapper.ToData(catalog);
             data.schemaVersion = 3;
+        }
+
+        /// <summary>Da a la librería el fondo inicial (como en una partida nueva) y ningún pedido.</summary>
+        private static void MigrateV3ToV4(SaveGameData data)
+        {
+            BookCatalog catalog;
+            try
+            {
+                catalog = SaveGameMapper.ToCatalog(data.world.catalog);
+            }
+            catch (System.ArgumentException exception)
+            {
+                throw new SaveGameException("La partida contiene un catálogo no válido: " + exception.Message, exception);
+            }
+
+            GameDate date = GameDate.FromDayNumber(data.world.dateDayNumber);
+            data.world.stock = PurchasingRules.InitialStock(catalog, date).Select(item => SaveGameMapper.ToData(item)).ToList();
+            data.world.orders = new List<PurchaseOrderData>();
+            data.world.nextOrderId = 1;
+            foreach (WorldEventData worldEvent in data.world.events ?? new List<WorldEventData>())
+            {
+                worldEvent.referenceId = 0;
+            }
+
+            data.schemaVersion = 4;
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Linq;
 using LibraryManager.Application.Saves;
 using LibraryManager.Domain.World;
 using NUnit.Framework;
@@ -64,6 +65,45 @@ namespace LibraryManager.Tests.EditMode.Application
         }
 
         [Test]
+        public void RoundTrip_KeepsStockOrdersAndDeliveries()
+        {
+            WorldState world = WorldState.CreateNew("Libros", 12);
+            var book = world.Catalog.Books.First(b => b.PhaseOn(world.Date) == LibraryManager.Domain.Catalog.BookPhase.NewRelease);
+            var distributor = world.Catalog.DistributorOf(book);
+            world.PlaceOrder(distributor.Id, new[] { new LibraryManager.Domain.Purchasing.OrderRequestLine(book.Id, 100) });
+            world.Liquidate(world.Inventory.Lots[0].BookId, 1);
+
+            WorldState loaded = SaveGameMapper.ToWorld(SaveGameMapper.ToData(world, new FixedClock().UtcNow));
+
+            Assert.AreEqual(world.Inventory.TotalUnits, loaded.Inventory.TotalUnits);
+            Assert.AreEqual(world.Inventory.ValueAtCost, loaded.Inventory.ValueAtCost);
+            Assert.AreEqual(world.Orders.NextId, loaded.Orders.NextId);
+            Assert.AreEqual(100, loaded.Orders.PendingQuantity(book.Id));
+
+            // El pedido guardado llega igual en la partida cargada.
+            loaded.AdvanceDays(30);
+            world.AdvanceDays(30);
+            Assert.AreEqual(world.Inventory.Quantity(book.Id), loaded.Inventory.Quantity(book.Id));
+            Assert.AreEqual(world.Inventory.ReturnableQuantity(book.Id, world.Date), loaded.Inventory.ReturnableQuantity(book.Id, loaded.Date));
+            Assert.AreEqual(world.Bookstore.Cash, loaded.Bookstore.Cash);
+        }
+
+        [Test]
+        public void VersionThree_IsMigratedWithTheInitialStock()
+        {
+            SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.schemaVersion = 3;
+            data.world.stock = null;
+            data.world.orders = null;
+
+            WorldState world = SaveGameMapper.ToWorld(data);
+
+            Assert.AreEqual(4, data.schemaVersion);
+            Assert.AreEqual(150, world.Inventory.TitleCount);
+            Assert.AreEqual(0, world.Orders.All.Count);
+        }
+
+        [Test]
         public void CorruptCatalog_IsRejected()
         {
             SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
@@ -72,6 +112,10 @@ namespace LibraryManager.Tests.EditMode.Application
 
             data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
             data.world.catalog.books[0].genre = 99;
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+
+            data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.world.stock[0].bookId = 99999;
             Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
         }
 

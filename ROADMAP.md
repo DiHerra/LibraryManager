@@ -78,7 +78,7 @@ Avance 2026-11-19 (L02): pruebas nuevas de horario (3), temporadas (11 casos), c
 
 ### L03. Modelo de libros y catálogo del mundo
 
-Estado: en curso, pendiente de validación en Unity. Dependencias: L02. Diseño: `docs/design/book-catalog.md`.
+Estado: cerrado el 2026-11-19. Dependencias: L02. Diseño: `docs/design/book-catalog.md`.
 
 - [x] Libro: título, autor, editorial, género (15), encuadernación (3), PVP, fecha de publicación y fase (próximamente, novedad o fondo).
 - [x] Popularidad base, semivida de la novedad y suelo de fondo; interés del día con `PopularityOn`.
@@ -86,16 +86,23 @@ Estado: en curso, pendiente de validación en Unity. Dependencias: L02. Diseño:
 - [x] Generador de catálogo reproducible por semilla: 640 títulos, 20 editoriales, 4 distribuidoras y 260 autores ficticios.
 - [x] Guardado versión 3 con el catálogo completo y migración desde la versión 2.
 - [x] Panel «Ver catálogo» en la tienda: más populares del día por género y próximas novedades.
-- [ ] Validación en Unity.
+- [x] Validación en Unity.
 
-Avance 2026-11-19 (L03): pruebas nuevas de libro (3), catálogo (3), generador (8) y guardado del catálogo (3). Decisión técnica: el generador vive en el dominio (C#) y no en un script Python con assets como en Volley, porque el catálogo se genera por partida; la partida guarda el catálogo completo para que los cambios del generador no alteren partidas existentes. Pendiente de compilar y ejecutar en Unity.
+Avance 2026-11-19 (L03): pruebas nuevas de libro (3), catálogo (3), generador (8) y guardado del catálogo (3). Decisión técnica: el generador vive en el dominio (C#) y no en un script Python con assets como en Volley, porque el catálogo se genera por partida; la partida guarda el catálogo completo para que los cambios del generador no alteren partidas existentes. Validado en Unity por Diego: Test Runner sin fallos, migración de la partida anterior, catálogo con filtro por género y novedades que cambian al avanzar.
 
 ### L04. Stock, pedidos y devoluciones
 
-- [ ] Inventario por título y ejemplar, con coste y fecha de entrada.
-- [ ] Pedidos a distribuidoras con plazo, mínimo y descuento.
-- [ ] Devolución de novedades dentro de plazo y saldos del fondo.
-- [ ] Alertas de rotura de stock y de libros parados.
+Estado: en curso, pendiente de validación en Unity. Dependencias: L03. Diseño: `docs/design/stock-and-purchasing.md`.
+
+- [x] Inventario por lotes con coste y fecha de entrada; salidas FIFO; fondo inicial de 150 títulos.
+- [x] Pedidos a distribuidoras con plazo, mínimo y límites; llegada como evento que pausa; pago al recibir.
+- [x] Devolución de novedades dentro de plazo y saldos del fondo al 10 % del PVP.
+- [x] Alertas de superventas sin stock, devoluciones a punto de vencer y libros parados.
+- [x] Guardado versión 4 con inventario y pedidos, y migración desde la versión 3.
+- [x] Pantallas: añadir al borrador desde el catálogo, pedidos por distribuidora, inventario con devolver y saldar, y avisos en la tienda.
+- [ ] Validación en Unity.
+
+Avance 2026-11-19 (L04): pruebas nuevas de inventario (4), compras (7), alertas (3), borrador de pedido (2) y guardado (3 más un caso de datos inválidos). Pendiente de compilar y ejecutar en Unity.
 
 ### L05. Tienda: secciones, estanterías, mesas y escaparate
 

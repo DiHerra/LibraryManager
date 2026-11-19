@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Economy;
+using LibraryManager.Domain.Purchasing;
+using LibraryManager.Domain.Stock;
 using LibraryManager.Domain.Store;
 using LibraryManager.Domain.Time;
 
@@ -25,7 +27,9 @@ namespace LibraryManager.Domain.World
             DeterministicRandom random,
             StoreSchedule schedule,
             WorldEventQueue events,
-            BookCatalog catalog)
+            BookCatalog catalog,
+            Inventory inventory,
+            PurchaseOrderBook orders)
         {
             Bookstore = Guard.NotNull(bookstore, nameof(bookstore));
             Date = date;
@@ -33,6 +37,8 @@ namespace LibraryManager.Domain.World
             Schedule = Guard.NotNull(schedule, nameof(schedule));
             Events = Guard.NotNull(events, nameof(events));
             Catalog = Guard.NotNull(catalog, nameof(catalog));
+            Inventory = Guard.NotNull(inventory, nameof(inventory));
+            Orders = Guard.NotNull(orders, nameof(orders));
         }
 
         public Bookstore Bookstore { get; }
@@ -47,6 +53,12 @@ namespace LibraryManager.Domain.World
 
         /// <summary>Títulos, editoriales y distribuidoras del mundo.</summary>
         public BookCatalog Catalog { get; }
+
+        /// <summary>Ejemplares en la tienda.</summary>
+        public Inventory Inventory { get; }
+
+        /// <summary>Pedidos a distribuidoras.</summary>
+        public PurchaseOrderBook Orders { get; }
 
         public bool IsOpenToday => Schedule.IsOpen(Date);
 
@@ -66,7 +78,9 @@ namespace LibraryManager.Domain.World
                 random,
                 StoreSchedule.CreateDefault(),
                 events,
-                catalog);
+                catalog,
+                new Inventory(PurchasingRules.InitialStock(catalog, DefaultStartDate)),
+                new PurchaseOrderBook());
         }
 
         /// <summary>Programa el alquiler mensual el día 1 del mes siguiente a <paramref name="from"/>.</summary>
@@ -98,6 +112,10 @@ namespace LibraryManager.Domain.World
                 {
                     Bookstore.Pay(worldEvent.Amount);
                 }
+                else if (worldEvent.Kind == WorldEventKind.OrderDelivery)
+                {
+                    ReceiveOrder((int)worldEvent.ReferenceId);
+                }
 
                 if (worldEvent.PausesAdvance)
                 {
@@ -117,6 +135,72 @@ namespace LibraryManager.Domain.World
             }
 
             return new DayReport(Date, IsOpenToday, season, due, cashBefore, Bookstore.Cash, pauses);
+        }
+
+        /// <summary>
+        /// Hace un pedido a una distribuidora. Llega el primer día de apertura tras el plazo
+        /// de entrega, como un evento que pausa el avance, y se paga al recibirlo.
+        /// </summary>
+        public PurchaseOrder PlaceOrder(int distributorId, IEnumerable<OrderRequestLine> request)
+        {
+            List<OrderLine> lines = PurchasingRules.BuildLines(Catalog, distributorId, Date, request);
+            Distributor distributor = Catalog.GetDistributor(distributorId);
+            GameDate delivery = PurchasingRules.DeliveryDate(Date, distributor, Schedule);
+
+            var order = new PurchaseOrder(Orders.ReserveId(), distributorId, lines, Date, delivery, PurchaseOrderStatus.Pending);
+            Orders.Add(order);
+            Events.Schedule(
+                delivery,
+                WorldEventKind.OrderDelivery,
+                $"Llega el pedido n.º {order.Id} de {distributor.Name}",
+                order.Total,
+                pausesAdvance: true,
+                referenceId: order.Id);
+            return order;
+        }
+
+        /// <summary>Devuelve a la distribuidora los ejemplares de novedad aún en plazo y recupera su coste.</summary>
+        public (int Quantity, Money Refund) ReturnNewReleases(int bookId)
+        {
+            (int quantity, Money cost) = Inventory.RemoveReturnable(bookId, Date);
+            if (quantity == 0)
+            {
+                throw new PurchasingException("No hay ejemplares de ese libro que se puedan devolver.");
+            }
+
+            Bookstore.ReceivePayment(cost);
+            return (quantity, cost);
+        }
+
+        /// <summary>Vende ejemplares a un saldista por el 10 % del PVP (los más antiguos primero).</summary>
+        public Money Liquidate(int bookId, int quantity)
+        {
+            if (quantity <= 0 || Inventory.Quantity(bookId) < quantity)
+            {
+                throw new PurchasingException("No hay tantos ejemplares de ese libro.");
+            }
+
+            Inventory.RemoveOldestFirst(bookId, quantity);
+            Money income = PurchasingRules.LiquidationValue(Catalog.GetBook(bookId)) * quantity;
+            Bookstore.ReceivePayment(income);
+            return income;
+        }
+
+        private void ReceiveOrder(int orderId)
+        {
+            PurchaseOrder order = Orders.Get(orderId);
+            if (order == null || order.Status != PurchaseOrderStatus.Pending)
+            {
+                return;
+            }
+
+            foreach (StockLot lot in PurchasingRules.LotsFor(order, Catalog, Date))
+            {
+                Inventory.Add(lot);
+            }
+
+            order.MarkReceived();
+            Bookstore.Pay(order.Total);
         }
 
         /// <summary>

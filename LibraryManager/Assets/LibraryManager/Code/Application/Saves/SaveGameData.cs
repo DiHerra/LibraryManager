@@ -31,6 +31,41 @@ namespace LibraryManager.Application.Saves
 
         // Versión 3 (L03)
         public CatalogData catalog;
+
+        // Versión 4 (L04)
+        public List<StockLotData> stock = new List<StockLotData>();
+        public List<PurchaseOrderData> orders = new List<PurchaseOrderData>();
+        public int nextOrderId;
+    }
+
+    [Serializable]
+    public sealed class StockLotData
+    {
+        public int bookId;
+        public int quantity;
+        public long unitCostCents;
+        public int receivedDayNumber;
+        /// <summary>-1 si el lote no se puede devolver.</summary>
+        public int returnDeadlineDayNumber = -1;
+    }
+
+    [Serializable]
+    public sealed class PurchaseOrderData
+    {
+        public int id;
+        public int distributorId;
+        public int orderDayNumber;
+        public int expectedDayNumber;
+        public int status;
+        public List<OrderLineData> lines = new List<OrderLineData>();
+    }
+
+    [Serializable]
+    public sealed class OrderLineData
+    {
+        public int bookId;
+        public int quantity;
+        public long unitCostCents;
     }
 
     [Serializable]
@@ -105,5 +140,7 @@ namespace LibraryManager.Application.Saves
         public int recurrence;
         public bool pausesAdvance;
         public int anchorDay;
+        // Versión 4
+        public long referenceId;
     }
 }

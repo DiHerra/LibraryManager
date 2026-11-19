@@ -45,7 +45,7 @@ namespace LibraryManager.Presentation.Common
         public static string Event(WorldEvent worldEvent)
         {
             string text = $"{ShortDate(worldEvent.Date)} · {worldEvent.Title}";
-            if (worldEvent.Kind == WorldEventKind.Payment)
+            if (worldEvent.Amount.Cents > 0)
             {
                 text += " · " + Money(worldEvent.Amount);
             }

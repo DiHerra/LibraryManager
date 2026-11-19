@@ -1,7 +1,11 @@
 using System;
+using System.Linq;
 using LibraryManager.Application.Common;
+using LibraryManager.Application.Purchasing;
 using LibraryManager.Application.Saves;
 using LibraryManager.Domain.Common;
+using LibraryManager.Domain.Economy;
+using LibraryManager.Domain.Purchasing;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
 
@@ -34,6 +38,9 @@ namespace LibraryManager.Application.Game
         /// <summary>Último avance hecho en esta sesión, para el resumen de la pantalla.</summary>
         public AdvanceResult LastAdvance { get; private set; }
 
+        /// <summary>Cesta de pedidos en preparación (no se guarda).</summary>
+        public OrderDraft Draft { get; } = new OrderDraft();
+
         public event Action WorldChanged;
 
         public void StartNew(string bookstoreName, ulong seed)
@@ -42,6 +49,7 @@ namespace LibraryManager.Application.Game
             {
                 World = WorldState.CreateNew(bookstoreName, seed);
                 LastAdvance = null;
+                Draft.Clear();
             });
         }
 
@@ -51,6 +59,7 @@ namespace LibraryManager.Application.Game
             {
                 World = SaveGameMapper.ToWorld(_repository.Load());
                 LastAdvance = null;
+                Draft.Clear();
             });
         }
 
@@ -72,6 +81,50 @@ namespace LibraryManager.Application.Game
         public AdvanceResult AdvanceWeek()
         {
             return Advance("avanzar semana", world => world.AdvanceToNextWeek());
+        }
+
+        /// <summary>Envía la parte del borrador de una distribuidora como pedido y la quita del borrador.</summary>
+        /// <exception cref="PurchasingException">Si el pedido no cumple las reglas (mínimo, títulos…).</exception>
+        public PurchaseOrder SendDraftOrder(int distributorId)
+        {
+            PurchaseOrder order = null;
+            Run("enviar pedido", () =>
+            {
+                RequireWorld();
+                DraftGroup group = Draft.ByDistributor(World.Catalog).FirstOrDefault(g => g.Distributor.Id == distributorId)
+                    ?? throw new PurchasingException("No hay nada en el borrador para esa distribuidora.");
+                order = World.PlaceOrder(distributorId, group.ToRequest());
+                Draft.ClearDistributor(World.Catalog, distributorId);
+            });
+            return order;
+        }
+
+        public (int Quantity, Money Refund) ReturnNewReleases(int bookId)
+        {
+            (int Quantity, Money Refund) result = (0, Money.Zero);
+            Run("devolver", () =>
+            {
+                RequireWorld();
+                result = World.ReturnNewReleases(bookId);
+            });
+            return result;
+        }
+
+        public Money Liquidate(int bookId, int quantity)
+        {
+            Money income = Money.Zero;
+            Run("saldar", () =>
+            {
+                RequireWorld();
+                income = World.Liquidate(bookId, quantity);
+            });
+            return income;
+        }
+
+        /// <summary>Notifica a las pantallas que algo cambió sin tocar el mundo (por ejemplo, el borrador).</summary>
+        public void NotifyChanged()
+        {
+            WorldChanged?.Invoke();
         }
 
         private AdvanceResult Advance(string operation, Func<WorldState, AdvanceResult> advance)

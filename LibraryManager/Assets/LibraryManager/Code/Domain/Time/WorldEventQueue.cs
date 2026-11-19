@@ -50,9 +50,10 @@ namespace LibraryManager.Domain.Time
             string title,
             Money amount = default,
             EventRecurrence recurrence = EventRecurrence.None,
-            bool pausesAdvance = false)
+            bool pausesAdvance = false,
+            long referenceId = 0)
         {
-            var worldEvent = new WorldEvent(NextId++, date, kind, title, amount, recurrence, pausesAdvance);
+            var worldEvent = new WorldEvent(NextId++, date, kind, title, amount, recurrence, pausesAdvance, 0, referenceId);
             Insert(worldEvent);
             return worldEvent;
         }
