@@ -106,7 +106,7 @@ Avance 2026-11-19 (L04): pruebas nuevas de inventario (4), compras (7), alertas 
 
 ### L05. Tienda: secciones, estanterías, mesas y escaparate
 
-Estado: en curso, pendiente de validación en Unity. Dependencias: L04. Diseño: `docs/design/store-layout.md`.
+Estado: cerrado el 2026-11-22. Dependencias: L04. Diseño: `docs/design/store-layout.md`.
 
 - [x] Local por defecto de 20 × 14 casillas con escaparate, mesa de novedades, expositor de caja y una estantería por género, cada uno con su capacidad.
 - [x] Colocar y retirar libros entre muebles y almacén; reajuste de lo expuesto tras devoluciones y saldos; los pedidos llegan a su sección.
@@ -114,27 +114,37 @@ Estado: en curso, pendiente de validación en Unity. Dependencias: L04. Diseño:
 - [x] Colocación automática determinista.
 - [x] Guardado versión 5 con muebles y colocación, y migración desde la versión 4.
 - [x] Vista 2D esquemática de la tienda (decisión de Diego, 2026-11-22: esquema ahora, pixel art en L16).
-- [ ] Validación en Unity.
+- [x] Validación en Unity.
 
-Avance 2026-11-22 (L05): pruebas nuevas de muebles y colocación (6), colocación en la partida (4) y guardado (3). Pendiente de compilar y ejecutar en Unity.
+Avance 2026-11-22 (L05): pruebas nuevas de muebles y colocación (6), colocación en la partida (4) y guardado (3). Diego dio el visto bueno al plano y pidió continuar el 2026-11-22; el resultado de la suite completa se confirma junto con L06-L07.
 
 ### L06. Lectores y demanda
 
-- [ ] Tipos de lector con gustos por género, presupuesto y frecuencia.
-- [ ] Llegada de clientes por hora, día y temporada.
-- [ ] Búsqueda de un libro concreto, compra por impulso y pedido por encargo.
-- [ ] Satisfacción del cliente y fidelidad.
+Estado: en curso, pendiente de validación en Unity. Dependencias: L05. Diseño: `docs/design/customers-and-sales.md`. Se hace junto con L07: sin las dos partes la tienda no vende.
+
+- [x] Cinco tipos de lector (ocasional, gran lector, familia, regalo, aficionado) con gustos por género, presupuesto y forma de comprar.
+- [x] Llegada de clientes por día de la semana, temporada, reputación y hora (más gente a mediodía y por la tarde).
+- [x] Búsqueda de un libro concreto, ojear mesas y estanterías, compra por impulso en caja y encargo cuando no hay el libro.
+- [x] Satisfacción por visita y reputación del barrio que se acerca poco a poco a la satisfacción media.
+- [ ] Validación en Unity.
 
 ### L07. Venta y recomendación
 
-- [ ] Simulación de una jornada: clientes, búsquedas, ventas y libros no encontrados.
-- [ ] Recomendación del librero según su conocimiento del género.
-- [ ] Tarjeta de fidelidad y descuentos permitidos.
-- [ ] Registro de ventas por título, género y hora.
+Estado: en curso, pendiente de validación en Unity. Dependencias: L06. Diseño: `docs/design/customers-and-sales.md`.
+
+- [x] Simulación de una jornada al cerrar cada día de apertura: clientes, búsquedas, ventas, libros no encontrados y encargos; cobro en caja y reajuste de lo expuesto.
+- [x] Recomendación del librero: si falta el título, propone el más popular expuesto del mismo género (probabilidad fija hasta tener personal en L09).
+- [x] Tarjeta de lector con descuento de 0 a 5 % (máximo legal), solo para clientes con tarjeta, que anima la compra.
+- [x] Registro de ventas por día (unidades, ingresos, coste, IVA incluido, descuentos, búsquedas, encargos, satisfacción, por hora y por género) y totales por título; los libros parados cuentan la última venta.
+- [x] Guardado versión 6 con reputación, descuento, encargos y registro, y migración desde la versión 5.
+- [x] Pantalla: última jornada, reputación y descuento en la tienda, encargos con botón para pedirlos, resumen de ventas al avanzar y ventas por título en el inventario.
+- [ ] Validación en Unity.
+
+Avance 2026-11-22 (L06-L07): pruebas nuevas de lectores y afluencia (9), registro, reputación y encargos (7), simulación de ventas en la partida (8), guardado (3) y sesión (1). Se adaptaron 4 pruebas anteriores que suponían caja sin ventas (alquiler, año completo, llegada de pedido y colocación de lo que llega). Pendiente de compilar y ejecutar en Unity.
 
 ### L08. Caja y economía básica
 
-- [ ] Caja diaria, IVA superreducido del 4 % y márgenes por editorial.
+- [ ] Caja diaria, IVA superreducido del 4 % y márgenes por editorial (L07 ya registra el IVA incluido y el coste de cada jornada).
 - [ ] Gastos fijos: alquiler, suministros y sueldos.
 - [ ] Balance mensual y quiebra si la caja no aguanta.
 - [ ] Prueba de equilibrio con semillas: una librería bien llevada sobrevive y una mal llevada no.

@@ -60,5 +60,25 @@ namespace LibraryManager.Tests.EditMode.Application
             Assert.AreEqual(6, result.Days.Count);
             Assert.AreSame(result, session.LastAdvance);
         }
+    
+        [Test]
+        public void LoyaltyDiscount_IsSavedAndLimited()
+        {
+            var repository = new InMemorySaveGameRepository();
+            var session = new GameSession(repository, new FixedClock());
+            session.StartNew("Libros", 3);
+            int notifications = 0;
+            session.WorldChanged += () => notifications++;
+
+            session.SetLoyaltyDiscount(400);
+            session.Save();
+            Assert.Throws<ArgumentOutOfRangeException>(() => session.SetLoyaltyDiscount(600));
+
+            var reopened = new GameSession(repository, new FixedClock());
+            reopened.Load();
+            Assert.AreEqual(400, reopened.World.Sales.LoyaltyDiscountBasisPoints);
+            Assert.AreEqual(1, notifications);
+            Assert.IsFalse(session.IsBusy);
+        }
     }
 }

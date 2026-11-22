@@ -58,6 +58,8 @@ namespace LibraryManager.Presentation.Purchasing
                     .Min();
 
                 string detail = $"{quantity} en tienda · {Formats.Phase(book.PhaseOn(world.Date))} · interés {book.PopularityOn(world.Date):0} · PVP {Formats.Money(book.Price)}";
+                var sold = world.Sales.Ledger.TotalOf(book.Id);
+                detail += sold == null ? " · sin ventas" : $" · {sold.Units} vendidos (último {Formats.ShortDate(sold.LastSoldOn)})";
                 if (returnable > 0)
                 {
                     detail += $" · {returnable} devolvibles hasta el {Formats.ShortDate(deadline)}";

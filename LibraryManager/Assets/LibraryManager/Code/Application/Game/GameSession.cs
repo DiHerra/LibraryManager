@@ -142,6 +142,16 @@ namespace LibraryManager.Application.Game
             });
         }
 
+        /// <summary>Fija el descuento de la tarjeta de lector (0–500 puntos básicos).</summary>
+        public void SetLoyaltyDiscount(int basisPoints)
+        {
+            Run("cambiar el descuento", () =>
+            {
+                RequireWorld();
+                World.SetLoyaltyDiscount(basisPoints);
+            });
+        }
+
         public void AutoArrangeStore()
         {
             Run("colocar automáticamente", () =>

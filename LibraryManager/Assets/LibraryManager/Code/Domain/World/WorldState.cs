@@ -4,6 +4,7 @@ using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Economy;
 using LibraryManager.Domain.Purchasing;
+using LibraryManager.Domain.Sales;
 using LibraryManager.Domain.Stock;
 using LibraryManager.Domain.Store;
 using LibraryManager.Domain.Time;
@@ -30,7 +31,8 @@ namespace LibraryManager.Domain.World
             BookCatalog catalog,
             Inventory inventory,
             PurchaseOrderBook orders,
-            StoreLayout layout)
+            StoreLayout layout,
+            SalesState sales = null)
         {
             Bookstore = Guard.NotNull(bookstore, nameof(bookstore));
             Date = date;
@@ -41,6 +43,7 @@ namespace LibraryManager.Domain.World
             Inventory = Guard.NotNull(inventory, nameof(inventory));
             Orders = Guard.NotNull(orders, nameof(orders));
             Layout = Guard.NotNull(layout, nameof(layout));
+            Sales = sales ?? new SalesState();
         }
 
         public Bookstore Bookstore { get; }
@@ -64,6 +67,9 @@ namespace LibraryManager.Domain.World
 
         /// <summary>Muebles de la tienda y libros expuestos.</summary>
         public StoreLayout Layout { get; }
+
+        /// <summary>Reputación, tarjeta de lector, encargos y registro de ventas.</summary>
+        public SalesState Sales { get; }
 
         public bool IsOpenToday => Schedule.IsOpen(Date);
 
@@ -104,11 +110,22 @@ namespace LibraryManager.Domain.World
                 EventRecurrence.Monthly);
         }
 
-        /// <summary>Pasa al día siguiente y resuelve sus eventos.</summary>
+        /// <summary>
+        /// Cierra el día en curso (si la tienda abre, se simula su jornada de venta y se cobra),
+        /// pasa al día siguiente y resuelve sus eventos.
+        /// </summary>
         public DayReport AdvanceDay()
         {
             CommercialSeason previousSeason = Season;
             Money cashBefore = Bookstore.Cash;
+
+            DailySales sales = null;
+            if (IsOpenToday)
+            {
+                sales = SalesSimulator.SimulateDay(Date, Schedule, Catalog, Inventory, Layout, Sales, Random);
+                Layout.Reconcile(Inventory, Catalog);
+                Bookstore.ReceivePayment(sales.Revenue);
+            }
 
             Date = Date.AddDays(1);
 
@@ -143,7 +160,7 @@ namespace LibraryManager.Domain.World
                 pauses.Add(new PauseReason(PauseReasonKind.CashBecameNegative, string.Empty));
             }
 
-            return new DayReport(Date, IsOpenToday, season, due, cashBefore, Bookstore.Cash, pauses);
+            return new DayReport(Date, IsOpenToday, season, due, cashBefore, Bookstore.Cash, pauses, sales);
         }
 
         /// <summary>
@@ -213,6 +230,12 @@ namespace LibraryManager.Domain.World
 
             order.MarkReceived();
             Bookstore.Pay(order.Total);
+        }
+
+        /// <summary>Fija el descuento de la tarjeta de lector (0–500 puntos básicos, máximo legal del 5 %).</summary>
+        public void SetLoyaltyDiscount(int basisPoints)
+        {
+            Sales.SetLoyaltyDiscount(basisPoints);
         }
 
         /// <summary>Recoloca toda la tienda con la colocación automática.</summary>

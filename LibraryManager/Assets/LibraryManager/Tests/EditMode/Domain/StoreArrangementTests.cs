@@ -60,12 +60,13 @@ namespace LibraryManager.Tests.EditMode.Domain
                 .OrderBy(b => b.Id)
                 .First();
             Fixture shelf = world.Layout.Fixtures.Single(f => f.Kind == FixtureKind.Shelf && f.Section == book.Genre);
-            int free = world.Layout.FreeCapacity(shelf.Id);
             world.PlaceOrder(world.Catalog.DistributorOf(book).Id, new[] { new OrderRequestLine(book.Id, 100) });
 
             world.AdvanceDays(30);
 
-            Assert.AreEqual(System.Math.Min(100, free), world.Layout.DisplayedOn(shelf.Id, book.Id));
+            // Se expone todo lo que cabe: o los 100 ejemplares o hasta llenar la estantería.
+            int displayed = world.Layout.DisplayedOn(shelf.Id, book.Id);
+            Assert.IsTrue(displayed == 100 || world.Layout.FreeCapacity(shelf.Id) == 0, $"Expuestos {displayed}, hueco {world.Layout.FreeCapacity(shelf.Id)}.");
         }
     }
 }

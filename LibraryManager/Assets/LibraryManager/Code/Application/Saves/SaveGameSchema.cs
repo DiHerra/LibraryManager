@@ -8,8 +8,9 @@ namespace LibraryManager.Application.Saves
         /// Versión 3: catálogo de libros, editoriales y distribuidoras (L03).
         /// Versión 4: inventario por lotes, pedidos y referencia de los eventos (L04).
         /// Versión 5: muebles de la tienda y libros expuestos (L05).
+        /// Versión 6: reputación, tarjeta de lector, encargos y registro de ventas (L06-L07).
         /// </summary>
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         public const int OldestSupportedVersion = 1;
     }

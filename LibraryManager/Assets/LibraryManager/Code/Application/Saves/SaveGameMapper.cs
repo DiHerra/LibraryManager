@@ -6,7 +6,7 @@ using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Economy;
 using LibraryManager.Domain.Purchasing;
 using LibraryManager.Domain.Stock;
-using LibraryManager.Domain.Store;
+using LibraryManager.Domain.Sales;
 using LibraryManager.Domain.Store;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
@@ -44,7 +44,8 @@ namespace LibraryManager.Application.Saves
                     catalog = ToData(world.Catalog),
                     stock = world.Inventory.Lots.Select(item => ToData(item)).ToList(),
                     orders = world.Orders.All.Select(item => ToData(item)).ToList(),
-                    nextOrderId = world.Orders.NextId
+                    nextOrderId = world.Orders.NextId,
+                    sales = ToData(world.Sales)
                 }
             };
             WriteLayout(data.world, world.Layout);
@@ -116,6 +117,118 @@ namespace LibraryManager.Application.Saves
             }
 
             return layout;
+        }
+
+        public static SalesData ToData(SalesState sales)
+        {
+            return new SalesData
+            {
+                reputation = sales.Reputation,
+                loyaltyDiscountBasisPoints = sales.LoyaltyDiscountBasisPoints,
+                nextSpecialOrderId = sales.NextSpecialOrderId,
+                specialOrders = sales.SpecialOrders.Select(order => new SpecialOrderData
+                {
+                    id = order.Id,
+                    bookId = order.BookId,
+                    requestedDayNumber = order.RequestedOn.DayNumber,
+                    expiresDayNumber = order.ExpiresOn.DayNumber
+                }).ToList(),
+                days = sales.Ledger.Days.Select(day => new DailySalesData
+                {
+                    dayNumber = day.Date.DayNumber,
+                    openingHour = day.OpeningHour,
+                    visitors = day.Visitors,
+                    buyers = day.Buyers,
+                    units = day.Units,
+                    revenueCents = day.Revenue.Cents,
+                    costCents = day.Cost.Cents,
+                    discountCents = day.Discounts.Cents,
+                    searches = day.Searches,
+                    searchesFound = day.SearchesFound,
+                    lostSearches = day.LostSearches,
+                    recommendations = day.Recommendations,
+                    recommendationsAccepted = day.RecommendationsAccepted,
+                    specialOrdersTaken = day.SpecialOrdersTaken,
+                    specialOrdersDelivered = day.SpecialOrdersDelivered,
+                    specialOrdersExpired = day.SpecialOrdersExpired,
+                    satisfactionPercent = day.SatisfactionPercent,
+                    unitsByHour = day.UnitsByHour.ToList(),
+                    unitsByGenre = day.UnitsByGenre.ToList()
+                }).ToList(),
+                books = sales.Ledger.Books.Select(total => new BookSalesData
+                {
+                    bookId = total.BookId,
+                    units = total.Units,
+                    revenueCents = total.Revenue.Cents,
+                    lastSoldDayNumber = total.LastSoldOn.DayNumber
+                }).ToList()
+            };
+        }
+
+        private static SalesState ToSales(SalesData data, BookCatalog catalog)
+        {
+            if (data == null || data.specialOrders == null || data.days == null || data.books == null)
+            {
+                throw new ArgumentException("Faltan las ventas y los encargos.");
+            }
+
+            var ledger = new SalesLedger(
+                data.days.Select(ToDailySales).ToList(),
+                data.books.Select(total =>
+                {
+                    catalog.GetBook(total.bookId);
+                    return new BookSalesTotal(total.bookId, total.units, new Money(total.revenueCents), GameDate.FromDayNumber(total.lastSoldDayNumber));
+                }).ToList());
+
+            return new SalesState(
+                data.reputation,
+                data.loyaltyDiscountBasisPoints,
+                data.specialOrders.Select(order =>
+                {
+                    if (order == null)
+                    {
+                        throw new ArgumentException("Hay un encargo vacío.");
+                    }
+
+                    catalog.GetBook(order.bookId);
+                    return new SpecialOrder(order.id, order.bookId, GameDate.FromDayNumber(order.requestedDayNumber), GameDate.FromDayNumber(order.expiresDayNumber));
+                }).ToList(),
+                data.nextSpecialOrderId,
+                ledger);
+        }
+
+        private static DailySales ToDailySales(DailySalesData data)
+        {
+            if (data == null || data.unitsByHour == null || data.unitsByGenre == null)
+            {
+                throw new ArgumentException("Hay una jornada de ventas vacía.");
+            }
+
+            var day = new DailySales(GameDate.FromDayNumber(data.dayNumber), data.openingHour, data.unitsByHour.Count)
+            {
+                Visitors = data.visitors,
+                Buyers = data.buyers,
+                Units = data.units,
+                Revenue = new Money(data.revenueCents),
+                Cost = new Money(data.costCents),
+                Discounts = new Money(data.discountCents),
+                Searches = data.searches,
+                SearchesFound = data.searchesFound,
+                LostSearches = data.lostSearches,
+                Recommendations = data.recommendations,
+                RecommendationsAccepted = data.recommendationsAccepted,
+                SpecialOrdersTaken = data.specialOrdersTaken,
+                SpecialOrdersDelivered = data.specialOrdersDelivered,
+                SpecialOrdersExpired = data.specialOrdersExpired,
+                SatisfactionPercent = data.satisfactionPercent
+            };
+            data.unitsByHour.CopyTo(day.UnitsByHour);
+            for (int i = 0; i < Math.Min(data.unitsByGenre.Count, day.UnitsByGenre.Length); i++)
+            {
+                day.UnitsByGenre[i] = data.unitsByGenre[i];
+            }
+
+            return day;
         }
 
         public static WorldEventData ToData(WorldEvent worldEvent)
@@ -320,7 +433,8 @@ namespace LibraryManager.Application.Saves
                     catalog,
                     inventory,
                     orders,
-                    ToLayout(world, catalog, inventory));
+                    ToLayout(world, catalog, inventory),
+                    ToSales(world.sales, catalog));
             }
             catch (ArgumentException exception)
             {

@@ -135,6 +135,77 @@ namespace LibraryManager.Tests.EditMode.Application
         }
 
         [Test]
+        public void RoundTrip_KeepsSalesSpecialOrdersAndReputation()
+        {
+            WorldState world = WorldState.CreateNew("Libros", 44);
+            world.SetLoyaltyDiscount(300);
+            world.AdvanceDays(4);
+            var book = world.Catalog.Books.First(b => b.IsReleased(world.Date) && world.Inventory.Quantity(b.Id) == 0);
+            world.Sales.AddSpecialOrder(book.Id, world.Date);
+
+            WorldState loaded = SaveGameMapper.ToWorld(SaveGameMapper.ToData(world, new FixedClock().UtcNow));
+
+            Assert.AreEqual(world.Sales.Reputation, loaded.Sales.Reputation);
+            Assert.AreEqual(300, loaded.Sales.LoyaltyDiscountBasisPoints);
+            Assert.AreEqual(world.Sales.NextSpecialOrderId, loaded.Sales.NextSpecialOrderId);
+            CollectionAssert.AreEqual(
+                world.Sales.SpecialOrders.Select(o => $"{o.Id}:{o.BookId}:{o.RequestedOn.DayNumber}:{o.ExpiresOn.DayNumber}").ToList(),
+                loaded.Sales.SpecialOrders.Select(o => $"{o.Id}:{o.BookId}:{o.RequestedOn.DayNumber}:{o.ExpiresOn.DayNumber}").ToList());
+            Assert.AreEqual(world.Sales.Ledger.Days.Count, loaded.Sales.Ledger.Days.Count);
+            var original = world.Sales.Ledger.Latest;
+            var copy = loaded.Sales.Ledger.Latest;
+            Assert.AreEqual(original.Date, copy.Date);
+            Assert.AreEqual(original.Units, copy.Units);
+            Assert.AreEqual(original.Revenue, copy.Revenue);
+            Assert.AreEqual(original.Cost, copy.Cost);
+            Assert.AreEqual(original.SatisfactionPercent, copy.SatisfactionPercent);
+            CollectionAssert.AreEqual(original.UnitsByHour, copy.UnitsByHour);
+            CollectionAssert.AreEqual(original.UnitsByGenre, copy.UnitsByGenre);
+            CollectionAssert.AreEqual(
+                world.Sales.Ledger.Books.Select(t => $"{t.BookId}:{t.Units}:{t.Revenue.Cents}:{t.LastSoldOn.DayNumber}").ToList(),
+                loaded.Sales.Ledger.Books.Select(t => $"{t.BookId}:{t.Units}:{t.Revenue.Cents}:{t.LastSoldOn.DayNumber}").ToList());
+
+            // La partida cargada sigue vendiendo exactamente igual.
+            world.AdvanceDays(10);
+            loaded.AdvanceDays(10);
+            Assert.AreEqual(world.Bookstore.Cash, loaded.Bookstore.Cash);
+            Assert.AreEqual(world.Sales.Reputation, loaded.Sales.Reputation);
+            Assert.AreEqual(world.Inventory.TotalUnits, loaded.Inventory.TotalUnits);
+        }
+
+        [Test]
+        public void VersionFive_IsMigratedWithDefaultSales()
+        {
+            SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.schemaVersion = 5;
+            data.world.sales = null;
+
+            WorldState world = SaveGameMapper.ToWorld(data);
+
+            Assert.AreEqual(SaveGameSchema.CurrentVersion, data.schemaVersion);
+            Assert.AreEqual(LibraryManager.Domain.Sales.SalesState.DefaultReputation, world.Sales.Reputation);
+            Assert.AreEqual(0, world.Sales.LoyaltyDiscountBasisPoints);
+            Assert.IsEmpty(world.Sales.SpecialOrders);
+            Assert.IsEmpty(world.Sales.Ledger.Days);
+        }
+
+        [Test]
+        public void InvalidSales_AreRejected()
+        {
+            SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.world.sales.loyaltyDiscountBasisPoints = 900;
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+
+            data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.world.sales.specialOrders.Add(new SpecialOrderData { id = 1, bookId = 99999, requestedDayNumber = 1, expiresDayNumber = 31 });
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+
+            data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.world.sales = null;
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+        }
+
+        [Test]
         public void MoreDisplayedThanInStock_IsRejected()
         {
             SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);

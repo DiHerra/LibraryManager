@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using LibraryManager.Domain.Economy;
+using LibraryManager.Domain.Sales;
 
 namespace LibraryManager.Domain.Time
 {
@@ -14,7 +15,8 @@ namespace LibraryManager.Domain.Time
             IReadOnlyList<WorldEvent> events,
             Money cashBefore,
             Money cashAfter,
-            IReadOnlyList<PauseReason> pauseReasons)
+            IReadOnlyList<PauseReason> pauseReasons,
+            DailySales sales = null)
         {
             Date = date;
             IsOpen = isOpen;
@@ -23,6 +25,7 @@ namespace LibraryManager.Domain.Time
             CashBefore = cashBefore;
             CashAfter = cashAfter;
             PauseReasons = pauseReasons;
+            Sales = sales;
         }
 
         public GameDate Date { get; }
@@ -32,6 +35,9 @@ namespace LibraryManager.Domain.Time
         public Money CashBefore { get; }
         public Money CashAfter { get; }
         public IReadOnlyList<PauseReason> PauseReasons { get; }
+
+        /// <summary>Ventas de la jornada que se cerró al avanzar (el día anterior a <see cref="Date"/>); null si estaba cerrado.</summary>
+        public DailySales Sales { get; }
 
         public Money CashChange => CashAfter - CashBefore;
         public bool ShouldPause => PauseReasons.Count > 0;
@@ -59,5 +65,29 @@ namespace LibraryManager.Domain.Time
         public Money CashChange => Days.Aggregate(Money.Zero, (total, day) => total + day.CashChange);
 
         public IEnumerable<WorldEvent> Events => Days.SelectMany(day => day.Events);
+
+        /// <summary>Jornadas de venta del avance.</summary>
+        public IEnumerable<DailySales> Sales => Days.Where(day => day.Sales != null).Select(day => day.Sales);
+
+        public int UnitsSold => Sales.Sum(day => day.Units);
+
+        public Money Revenue => Sales.Aggregate(Money.Zero, (total, day) => total + day.Revenue);
+
+        public int Visitors => Sales.Sum(day => day.Visitors);
+
+        public int LostSearches => Sales.Sum(day => day.LostSearches);
+
+        public int SpecialOrdersTaken => Sales.Sum(day => day.SpecialOrdersTaken);
+
+        /// <summary>Títulos más vendidos en el avance.</summary>
+        public IReadOnlyList<SaleLine> TopTitles(int count) =>
+            Sales.SelectMany(day => day.Lines)
+                .GroupBy(line => line.BookId)
+                .Select(group => new SaleLine(group.Key, group.Sum(line => line.Units), group.Aggregate(Money.Zero, (total, line) => total + line.Revenue)))
+                .OrderByDescending(line => line.Units)
+                .ThenByDescending(line => line.Revenue)
+                .ThenBy(line => line.BookId)
+                .Take(count)
+                .ToList();
     }
 }

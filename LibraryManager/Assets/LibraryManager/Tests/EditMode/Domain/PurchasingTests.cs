@@ -64,7 +64,7 @@ namespace LibraryManager.Tests.EditMode.Domain
 
             Assert.AreEqual(order.ExpectedDate, _world.Date, "El avance se detiene el día que llega el pedido.");
             Assert.AreEqual(PurchaseOrderStatus.Received, order.Status);
-            Assert.AreEqual(cashBefore - order.Total, _world.Bookstore.Cash);
+            Assert.AreEqual(cashBefore - order.Total + result.Revenue, _world.Bookstore.Cash, "Se paga al recibir; el resto del cambio son las ventas.");
             Assert.IsTrue(result.StoppedEarly);
             foreach (OrderLine line in order.Lines)
             {

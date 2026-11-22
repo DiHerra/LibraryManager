@@ -3,6 +3,7 @@ using System.Globalization;
 using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Purchasing;
+using LibraryManager.Domain.Sales;
 using LibraryManager.Domain.Stock;
 using LibraryManager.Domain.Store;
 using System.Linq;
@@ -58,6 +59,11 @@ namespace LibraryManager.Application.Saves
             if (data.schemaVersion == 4)
             {
                 MigrateV4ToV5(data);
+            }
+
+            if (data.schemaVersion == 5)
+            {
+                MigrateV5ToV6(data);
             }
 
             return data;
@@ -144,6 +150,13 @@ namespace LibraryManager.Application.Saves
             }
 
             data.schemaVersion = 5;
+        }
+
+        /// <summary>Empieza con reputación 50, sin descuento, sin encargos y sin ventas registradas.</summary>
+        private static void MigrateV5ToV6(SaveGameData data)
+        {
+            data.world.sales = SaveGameMapper.ToData(new SalesState());
+            data.schemaVersion = 6;
         }
     }
 }

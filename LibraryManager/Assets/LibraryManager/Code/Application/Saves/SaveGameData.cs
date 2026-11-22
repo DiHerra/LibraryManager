@@ -40,6 +40,63 @@ namespace LibraryManager.Application.Saves
         // Versión 5 (L05)
         public List<FixtureData> fixtures = new List<FixtureData>();
         public List<PlacementData> placements = new List<PlacementData>();
+
+        // Versión 6 (L06-L07)
+        public SalesData sales;
+    }
+
+    [Serializable]
+    public sealed class SalesData
+    {
+        /// <summary>Reputación en centésimas (0–10000).</summary>
+        public int reputation;
+        public int loyaltyDiscountBasisPoints;
+        public int nextSpecialOrderId;
+        public List<SpecialOrderData> specialOrders = new List<SpecialOrderData>();
+        public List<DailySalesData> days = new List<DailySalesData>();
+        public List<BookSalesData> books = new List<BookSalesData>();
+    }
+
+    [Serializable]
+    public sealed class SpecialOrderData
+    {
+        public int id;
+        public int bookId;
+        public int requestedDayNumber;
+        public int expiresDayNumber;
+    }
+
+    [Serializable]
+    public sealed class DailySalesData
+    {
+        public int dayNumber;
+        public int openingHour;
+        public int visitors;
+        public int buyers;
+        public int units;
+        public long revenueCents;
+        public long costCents;
+        public long discountCents;
+        public int searches;
+        public int searchesFound;
+        public int lostSearches;
+        public int recommendations;
+        public int recommendationsAccepted;
+        public int specialOrdersTaken;
+        public int specialOrdersDelivered;
+        public int specialOrdersExpired;
+        public int satisfactionPercent;
+        public List<int> unitsByHour = new List<int>();
+        public List<int> unitsByGenre = new List<int>();
+    }
+
+    [Serializable]
+    public sealed class BookSalesData
+    {
+        public int bookId;
+        public int units;
+        public long revenueCents;
+        public int lastSoldDayNumber;
     }
 
     [Serializable]

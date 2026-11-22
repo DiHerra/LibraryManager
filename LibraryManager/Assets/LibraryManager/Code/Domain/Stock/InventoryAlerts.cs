@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Purchasing;
+using LibraryManager.Domain.Sales;
 using LibraryManager.Domain.Time;
 
 namespace LibraryManager.Domain.Stock
@@ -48,15 +49,23 @@ namespace LibraryManager.Domain.Stock
                 .ToList();
         }
 
-        /// <summary>Títulos cuyo lote más reciente lleva más de 180 días en la tienda.</summary>
-        public static IReadOnlyList<int> StaleTitles(Inventory inventory, GameDate date)
+        /// <summary>
+        /// Títulos parados: más de 180 días sin venderse ni reponerse (cuenta lo más
+        /// reciente entre la última llegada y la última venta).
+        /// </summary>
+        public static IReadOnlyList<int> StaleTitles(Inventory inventory, GameDate date, SalesLedger ledger = null)
         {
             return inventory.Lots
                 .GroupBy(lot => lot.BookId)
-                .Where(group => group.Max(lot => lot.ReceivedDate).DaysUntil(date) > StaleDays)
+                .Where(group => LastMovement(group.Max(lot => lot.ReceivedDate), ledger?.LastSold(group.Key)).DaysUntil(date) > StaleDays)
                 .Select(group => group.Key)
                 .OrderBy(id => id)
                 .ToList();
+        }
+
+        private static GameDate LastMovement(GameDate lastReceived, GameDate? lastSold)
+        {
+            return lastSold.HasValue && lastSold.Value > lastReceived ? lastSold.Value : lastReceived;
         }
     }
 }

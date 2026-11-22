@@ -25,12 +25,15 @@ namespace LibraryManager.Tests.EditMode.Domain
         {
             WorldState world = WorldState.CreateNew("Libros", 1);
             AdvanceUntil(world, GameDate.Create(2026, 9, 30));
+            Money cashBefore = world.Bookstore.Cash;
 
             DayReport report = world.AdvanceDay();
 
+            // El 30 de septiembre abre: la caja recibe sus ventas y paga el alquiler del 1 de octubre.
             Assert.AreEqual(GameDate.Create(2026, 10, 1), report.Date);
-            Assert.AreEqual(WorldState.DefaultStartingCash - WorldState.DefaultMonthlyRent, world.Bookstore.Cash);
-            Assert.AreEqual(-WorldState.DefaultMonthlyRent, report.CashChange);
+            Assert.IsNotNull(report.Sales);
+            Assert.AreEqual(cashBefore - WorldState.DefaultMonthlyRent + report.Sales.Revenue, world.Bookstore.Cash);
+            Assert.AreEqual(report.Sales.Revenue - WorldState.DefaultMonthlyRent, report.CashChange);
             Assert.AreEqual(GameDate.Create(2026, 11, 1), world.Events.Pending.Single().Date);
         }
 
@@ -100,16 +103,18 @@ namespace LibraryManager.Tests.EditMode.Domain
             WorldState first = WorldState.CreateNew("Libros", 9);
             WorldState second = WorldState.CreateNew("Libros", 9);
 
+            Money revenue = Money.Zero;
             for (int i = 0; i < 365; i++)
             {
-                first.AdvanceDay();
+                revenue += first.AdvanceDay().Sales?.Revenue ?? Money.Zero;
                 second.AdvanceDay();
             }
 
             Assert.AreEqual(first.Date, second.Date);
             Assert.AreEqual(first.Bookstore.Cash, second.Bookstore.Cash);
             Assert.AreEqual(first.Events.NextId, second.Events.NextId);
-            Assert.AreEqual(WorldState.DefaultStartingCash - WorldState.DefaultMonthlyRent * 12, first.Bookstore.Cash);
+            Assert.AreEqual(first.Sales.Reputation, second.Sales.Reputation);
+            Assert.AreEqual(WorldState.DefaultStartingCash - WorldState.DefaultMonthlyRent * 12 + revenue, first.Bookstore.Cash);
         }
 
         [Test]

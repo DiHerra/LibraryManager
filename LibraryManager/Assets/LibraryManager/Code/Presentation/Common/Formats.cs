@@ -127,6 +127,23 @@ namespace LibraryManager.Presentation.Common
             return "×" + (basisPoints / 10000m).ToString("0.##", Spanish);
         }
 
+        /// <summary>Reputación en centésimas como «52,3/100».</summary>
+        public static string Reputation(int hundredths)
+        {
+            return (hundredths / 100m).ToString("0.#", Spanish) + "/100";
+        }
+
+        /// <summary>Puntos básicos como porcentaje: 500 → «5 %».</summary>
+        public static string Percent(int basisPoints)
+        {
+            return (basisPoints / 100m).ToString("0.##", Spanish) + " %";
+        }
+
+        public static string Units(int units)
+        {
+            return units == 1 ? "1 libro" : units.ToString("N0", Spanish) + " libros";
+        }
+
         private static string Capitalize(string text)
         {
             return string.IsNullOrEmpty(text) ? text : char.ToUpper(text[0], Spanish) + text.Substring(1);

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LibraryManager.Application.Game;
 using LibraryManager.Domain.Catalog;
+using LibraryManager.Domain.Sales;
 using LibraryManager.Domain.Stock;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
@@ -23,6 +24,9 @@ namespace LibraryManager.Presentation.Store
     {
         private const int UpcomingEventsShown = 4;
         private const int AlertsShown = 5;
+        private const int SpecialOrdersShown = 5;
+        private const int TopTitlesShown = 3;
+        private const int DiscountStep = 100;
 
         private Label _name;
         private Label _date;
@@ -30,6 +34,9 @@ namespace LibraryManager.Presentation.Store
         private Label _season;
         private Label _cash;
         private Label _stock;
+        private Label _reputation;
+        private Label _lastDay;
+        private VisualElement _specialOrders;
         private VisualElement _alerts;
         private VisualElement _upcoming;
         private Label _summary;
@@ -76,9 +83,26 @@ namespace LibraryManager.Presentation.Store
             card.Add(_cash);
             _stock = Ui.Text(string.Empty, 14);
             card.Add(_stock);
+            _lastDay = Ui.Text(string.Empty, 14);
+            _lastDay.style.whiteSpace = WhiteSpace.Normal;
+            card.Add(_lastDay);
+
+            var reputationRow = new VisualElement();
+            reputationRow.style.flexDirection = FlexDirection.Row;
+            reputationRow.style.alignItems = Align.Center;
+            _reputation = Ui.Text(string.Empty, 14);
+            _reputation.style.flexGrow = 1;
+            _reputation.style.whiteSpace = WhiteSpace.Normal;
+            reputationRow.Add(_reputation);
+            reputationRow.Add(SmallButton("− 1 %", () => ChangeDiscount(-DiscountStep)));
+            reputationRow.Add(SmallButton("+ 1 %", () => ChangeDiscount(DiscountStep)));
+            card.Add(reputationRow);
 
             _alerts = new VisualElement();
             card.Add(_alerts);
+
+            _specialOrders = new VisualElement();
+            card.Add(_specialOrders);
 
             card.Add(Ui.Text("Próximos eventos", 16));
             _upcoming = new VisualElement();
@@ -119,6 +143,25 @@ namespace LibraryManager.Presentation.Store
             Session.WorldChanged -= Refresh;
         }
 
+        private static Button SmallButton(string text, System.Action onClick)
+        {
+            var button = new Button(onClick) { text = text };
+            button.style.fontSize = 14;
+            button.style.height = 30;
+            button.style.minWidth = 56;
+            return button;
+        }
+
+        private void ChangeDiscount(int delta)
+        {
+            int current = Session.World.Sales.LoyaltyDiscountBasisPoints;
+            int updated = System.Math.Max(0, System.Math.Min(SalesRules.MaxLoyaltyDiscountBasisPoints, current + delta));
+            if (updated != current)
+            {
+                Session.SetLoyaltyDiscount(updated);
+            }
+        }
+
         private static Button Grow(Button button)
         {
             button.style.flexGrow = 1;
@@ -138,7 +181,15 @@ namespace LibraryManager.Presentation.Store
             _cash.text = "Caja: " + Formats.Money(world.Bookstore.Cash);
             _stock.text = $"{world.Inventory.TotalUnits} ejemplares de {world.Inventory.TitleCount} títulos · {world.Orders.Pending.Count()} pedidos en camino";
 
+            SalesState sales = world.Sales;
+            _reputation.text = $"Reputación en el barrio: {Formats.Reputation(sales.Reputation)} · Tarjeta de lector: {Formats.Percent(sales.LoyaltyDiscountBasisPoints)} de descuento";
+            DailySales latest = sales.Ledger.Latest;
+            _lastDay.text = latest == null
+                ? "Todavía no hay ventas: avanza el día para abrir la tienda."
+                : $"Última jornada ({Formats.ShortDate(latest.Date)}): {Formats.Units(latest.Units)} · {Formats.Money(latest.Revenue)} · {latest.Visitors} visitantes · satisfacción {latest.SatisfactionPercent} %";
+
             RefreshAlerts(world);
+            RefreshSpecialOrders(world);
 
             _upcoming.Clear();
             IReadOnlyList<WorldEvent> upcoming = world.Events.Upcoming(UpcomingEventsShown);
@@ -173,10 +224,10 @@ namespace LibraryManager.Presentation.Store
                 lines.Add($"Devolución de «{world.Catalog.GetBook(item.BookId).Title}» ({item.Quantity}) vence el {Formats.ShortDate(item.Deadline)}");
             }
 
-            int stale = InventoryAlerts.StaleTitles(world.Inventory, world.Date).Count;
+            int stale = InventoryAlerts.StaleTitles(world.Inventory, world.Date, world.Sales.Ledger).Count;
             if (stale > 0)
             {
-                lines.Add($"{stale} títulos llevan más de {InventoryAlerts.StaleDays} días sin reponerse");
+                lines.Add($"{stale} títulos llevan más de {InventoryAlerts.StaleDays} días sin venderse ni reponerse");
             }
 
             foreach (string line in lines)
@@ -188,7 +239,49 @@ namespace LibraryManager.Presentation.Store
             }
         }
 
-        private static string Summary(AdvanceResult result)
+        /// <summary>Encargos de clientes agrupados por título, con un botón para añadirlos al pedido.</summary>
+        private void RefreshSpecialOrders(WorldState world)
+        {
+            _specialOrders.Clear();
+            var groups = world.Sales.SpecialOrders
+                .GroupBy(order => order.BookId)
+                .Select(group => (Book: world.Catalog.GetBook(group.Key), Count: group.Count(), DaysLeft: group.Min(order => order.DaysLeft(world.Date))))
+                .OrderBy(item => item.DaysLeft)
+                .ThenBy(item => item.Book.Id)
+                .ToList();
+            if (groups.Count == 0)
+            {
+                return;
+            }
+
+            _specialOrders.Add(Ui.Text($"Encargos de clientes ({world.Sales.SpecialOrders.Count})", 16));
+            foreach ((Book book, int count, int daysLeft) in groups.Take(SpecialOrdersShown))
+            {
+                int coming = world.Orders.PendingQuantity(book.Id) + Session.Draft.Quantity(book.Id);
+                string detail = $"{count} {(count == 1 ? "cliente" : "clientes")} · caduca en {daysLeft} días"
+                    + (coming > 0 ? $" · {coming} en camino o en el borrador" : " · sin pedir");
+                int missing = System.Math.Max(0, count - coming);
+                if (missing > 0)
+                {
+                    _specialOrders.Add(Ui.Row(book.Title, detail, ("+ pedido", () =>
+                    {
+                        Session.Draft.Add(book.Id, missing);
+                        Session.NotifyChanged();
+                    })));
+                }
+                else
+                {
+                    _specialOrders.Add(Ui.Row(book.Title, detail));
+                }
+            }
+
+            if (groups.Count > SpecialOrdersShown)
+            {
+                _specialOrders.Add(Ui.Text($"… y {groups.Count - SpecialOrdersShown} títulos más", 13));
+            }
+        }
+
+        private string Summary(AdvanceResult result)
         {
             if (result == null)
             {
@@ -201,6 +294,26 @@ namespace LibraryManager.Presentation.Store
                     ? "Ha pasado 1 día."
                     : $"Han pasado {result.Days.Count} días ({result.DaysOpen} de apertura)."
             };
+
+            if (result.Sales.Any())
+            {
+                lines.Add($"Ventas: {Formats.Units(result.UnitsSold)} por {Formats.Money(result.Revenue)} ({result.Visitors} visitantes).");
+                IReadOnlyList<SaleLine> top = result.TopTitles(TopTitlesShown);
+                if (top.Count > 0)
+                {
+                    lines.Add("Lo más vendido: " + string.Join(", ", top.Select(line => $"«{Session.World.Catalog.GetBook(line.BookId).Title}» ({line.Units})")));
+                }
+
+                if (result.LostSearches > 0)
+                {
+                    lines.Add($"{result.LostSearches} clientes buscaron algo que no había y se fueron sin nada.");
+                }
+
+                if (result.SpecialOrdersTaken > 0)
+                {
+                    lines.Add($"Nuevos encargos: {result.SpecialOrdersTaken}.");
+                }
+            }
 
             lines.AddRange(result.Events.Select(e => "• " + e.Title + (e.Amount.Cents > 0 ? " " + Formats.Money(e.Amount) : string.Empty)));
 
