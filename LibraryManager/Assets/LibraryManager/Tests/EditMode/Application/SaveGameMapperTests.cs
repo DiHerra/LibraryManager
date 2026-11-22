@@ -59,7 +59,7 @@ namespace LibraryManager.Tests.EditMode.Application
 
             WorldState world = SaveGameMapper.ToWorld(data);
 
-            Assert.AreEqual(3, data.schemaVersion);
+            Assert.AreEqual(SaveGameSchema.CurrentVersion, data.schemaVersion);
             Assert.That(world.Catalog.Books.Count, Is.GreaterThanOrEqualTo(600));
             Assert.AreEqual(randomState, world.Random.State.ToString(System.Globalization.CultureInfo.InvariantCulture), "La migración no consume el generador de la partida.");
         }
@@ -98,7 +98,7 @@ namespace LibraryManager.Tests.EditMode.Application
 
             WorldState world = SaveGameMapper.ToWorld(data);
 
-            Assert.AreEqual(4, data.schemaVersion);
+            Assert.AreEqual(SaveGameSchema.CurrentVersion, data.schemaVersion);
             Assert.AreEqual(150, world.Inventory.TitleCount);
             Assert.AreEqual(0, world.Orders.All.Count);
         }
