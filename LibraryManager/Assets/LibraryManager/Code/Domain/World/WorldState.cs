@@ -29,7 +29,8 @@ namespace LibraryManager.Domain.World
             WorldEventQueue events,
             BookCatalog catalog,
             Inventory inventory,
-            PurchaseOrderBook orders)
+            PurchaseOrderBook orders,
+            StoreLayout layout)
         {
             Bookstore = Guard.NotNull(bookstore, nameof(bookstore));
             Date = date;
@@ -39,6 +40,7 @@ namespace LibraryManager.Domain.World
             Catalog = Guard.NotNull(catalog, nameof(catalog));
             Inventory = Guard.NotNull(inventory, nameof(inventory));
             Orders = Guard.NotNull(orders, nameof(orders));
+            Layout = Guard.NotNull(layout, nameof(layout));
         }
 
         public Bookstore Bookstore { get; }
@@ -60,6 +62,9 @@ namespace LibraryManager.Domain.World
         /// <summary>Pedidos a distribuidoras.</summary>
         public PurchaseOrderBook Orders { get; }
 
+        /// <summary>Muebles de la tienda y libros expuestos.</summary>
+        public StoreLayout Layout { get; }
+
         public bool IsOpenToday => Schedule.IsOpen(Date);
 
         public CommercialSeason Season => CommercialCalendar.GetSeason(Date);
@@ -71,6 +76,9 @@ namespace LibraryManager.Domain.World
 
             var random = new DeterministicRandom(seed);
             BookCatalog catalog = CatalogGenerator.Generate(random.NextULong(), DefaultStartDate);
+            var inventory = new Inventory(PurchasingRules.InitialStock(catalog, DefaultStartDate));
+            StoreLayout layout = DefaultStoreLayout.Create();
+            DefaultStoreLayout.AutoArrange(layout, inventory, catalog, DefaultStartDate);
 
             return new WorldState(
                 new Bookstore(bookstoreName, DefaultStartingCash),
@@ -79,8 +87,9 @@ namespace LibraryManager.Domain.World
                 StoreSchedule.CreateDefault(),
                 events,
                 catalog,
-                new Inventory(PurchasingRules.InitialStock(catalog, DefaultStartDate)),
-                new PurchaseOrderBook());
+                inventory,
+                new PurchaseOrderBook(),
+                layout);
         }
 
         /// <summary>Programa el alquiler mensual el día 1 del mes siguiente a <paramref name="from"/>.</summary>
@@ -168,6 +177,7 @@ namespace LibraryManager.Domain.World
                 throw new PurchasingException("No hay ejemplares de ese libro que se puedan devolver.");
             }
 
+            Layout.Reconcile(Inventory, Catalog);
             Bookstore.ReceivePayment(cost);
             return (quantity, cost);
         }
@@ -181,6 +191,7 @@ namespace LibraryManager.Domain.World
             }
 
             Inventory.RemoveOldestFirst(bookId, quantity);
+            Layout.Reconcile(Inventory, Catalog);
             Money income = PurchasingRules.LiquidationValue(Catalog.GetBook(bookId)) * quantity;
             Bookstore.ReceivePayment(income);
             return income;
@@ -197,10 +208,17 @@ namespace LibraryManager.Domain.World
             foreach (StockLot lot in PurchasingRules.LotsFor(order, Catalog, Date))
             {
                 Inventory.Add(lot);
+                DefaultStoreLayout.ShelveInSection(Layout, Inventory, Catalog.GetBook(lot.BookId));
             }
 
             order.MarkReceived();
             Bookstore.Pay(order.Total);
+        }
+
+        /// <summary>Recoloca toda la tienda con la colocación automática.</summary>
+        public void AutoArrangeStore()
+        {
+            DefaultStoreLayout.AutoArrange(Layout, Inventory, Catalog, Date);
         }
 
         /// <summary>

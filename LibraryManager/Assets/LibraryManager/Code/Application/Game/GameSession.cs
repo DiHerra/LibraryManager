@@ -121,6 +121,36 @@ namespace LibraryManager.Application.Game
             return income;
         }
 
+        /// <summary>Expone ejemplares del almacén en un mueble.</summary>
+        /// <exception cref="LibraryManager.Domain.Store.StoreLayoutException">Si no caben o no hay suficientes en el almacén.</exception>
+        public void PlaceOnFixture(int fixtureId, int bookId, int quantity)
+        {
+            Run("colocar", () =>
+            {
+                RequireWorld();
+                World.Layout.Place(fixtureId, bookId, quantity, World.Inventory);
+            });
+        }
+
+        /// <summary>Retira ejemplares de un mueble al almacén.</summary>
+        public void RemoveFromFixture(int fixtureId, int bookId, int quantity)
+        {
+            Run("retirar", () =>
+            {
+                RequireWorld();
+                World.Layout.Remove(fixtureId, bookId, quantity);
+            });
+        }
+
+        public void AutoArrangeStore()
+        {
+            Run("colocar automáticamente", () =>
+            {
+                RequireWorld();
+                World.AutoArrangeStore();
+            });
+        }
+
         /// <summary>Notifica a las pantallas que algo cambió sin tocar el mundo (por ejemplo, el borrador).</summary>
         public void NotifyChanged()
         {

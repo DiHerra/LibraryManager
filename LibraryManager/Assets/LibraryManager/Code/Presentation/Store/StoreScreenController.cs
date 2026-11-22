@@ -56,8 +56,9 @@ namespace LibraryManager.Presentation.Store
             var catalog = new CatalogPanel(() => Session, ShowStore);
             var orders = new OrdersPanel(() => Session, ShowStore);
             var inventory = new InventoryPanel(() => Session, ShowStore);
+            var plan = new StorePlanPanel(() => Session, ShowStore);
             _panels.Clear();
-            _panels.AddRange(new IScreenPanel[] { catalog, orders, inventory });
+            _panels.AddRange(new IScreenPanel[] { catalog, orders, inventory, plan });
             foreach (IScreenPanel panel in _panels)
             {
                 root.Add(panel.Root);
@@ -95,6 +96,7 @@ namespace LibraryManager.Presentation.Store
             panelsRow.Add(Grow(Ui.Button("Catálogo", () => Show(catalog))));
             panelsRow.Add(Grow(Ui.Button("Pedidos", () => Show(orders))));
             panelsRow.Add(Grow(Ui.Button("Inventario", () => Show(inventory))));
+            panelsRow.Add(Grow(Ui.Button("Tienda", () => Show(plan))));
             card.Add(panelsRow);
 
             card.Add(Ui.Button("Guardar", Save));

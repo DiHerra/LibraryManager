@@ -1,6 +1,7 @@
 using System.Globalization;
 using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Economy;
+using LibraryManager.Domain.Store;
 using LibraryManager.Domain.Time;
 
 namespace LibraryManager.Presentation.Common
@@ -111,6 +112,19 @@ namespace LibraryManager.Presentation.Common
                 case BookPhase.NewRelease: return "Novedad";
                 default: return "Fondo";
             }
+        }
+
+        public static string Fixture(Fixture fixture)
+        {
+            return fixture.Kind == FixtureKind.Shelf && fixture.Section.HasValue
+                ? "Estantería de " + Genre(fixture.Section.Value).ToLower(Spanish)
+                : fixture.Name;
+        }
+
+        /// <summary>Multiplicador de visibilidad para mostrar: «×2,5».</summary>
+        public static string Visibility(int basisPoints)
+        {
+            return "×" + (basisPoints / 10000m).ToString("0.##", Spanish);
         }
 
         private static string Capitalize(string text)

@@ -106,10 +106,17 @@ Avance 2026-11-19 (L04): pruebas nuevas de inventario (4), compras (7), alertas 
 
 ### L05. Tienda: secciones, estanterías, mesas y escaparate
 
-- [ ] Plano de la tienda con muebles y capacidad.
-- [ ] Colocar libros por sección, en mesa de novedades o en escaparate.
-- [ ] La ubicación afecta la visibilidad y la probabilidad de venta.
-- [ ] Vista 2D de la tienda.
+Estado: en curso, pendiente de validación en Unity. Dependencias: L04. Diseño: `docs/design/store-layout.md`.
+
+- [x] Local por defecto de 20 × 14 casillas con escaparate, mesa de novedades, expositor de caja y una estantería por género, cada uno con su capacidad.
+- [x] Colocar y retirar libros entre muebles y almacén; reajuste de lo expuesto tras devoluciones y saldos; los pedidos llegan a su sección.
+- [x] Visibilidad por ubicación (×2,5 escaparate … ×0,2 almacén) lista para la demanda de L06.
+- [x] Colocación automática determinista.
+- [x] Guardado versión 5 con muebles y colocación, y migración desde la versión 4.
+- [x] Vista 2D esquemática de la tienda (decisión de Diego, 2026-11-22: esquema ahora, pixel art en L16).
+- [ ] Validación en Unity.
+
+Avance 2026-11-22 (L05): pruebas nuevas de muebles y colocación (6), colocación en la partida (4) y guardado (3). Pendiente de compilar y ejecutar en Unity.
 
 ### L06. Lectores y demanda
 
@@ -163,6 +170,8 @@ Avance 2026-11-19 (L04): pruebas nuevas de inventario (4), compras (7), alertas 
 ### L14. Interfaz final, navegación y accesibilidad
 ### L15. Partidas, ajustes y recuperación
 ### L16. Contenido, tutorial, localización (español e inglés) y presentación
+
+- [ ] Arte pixel del local y de los muebles, sustituyendo el plano esquemático de L05 (decisión de Diego, 2026-11-22).
 ### L17. Simulación de varios años, rendimiento y pruebas integrales
 ### L18. Beta, distribución y lanzamiento 1.0
 

@@ -104,6 +104,45 @@ namespace LibraryManager.Tests.EditMode.Application
         }
 
         [Test]
+        public void RoundTrip_KeepsTheStoreLayout()
+        {
+            WorldState world = WorldState.CreateNew("Libros", 21);
+            var window = world.Layout.Fixtures.First(f => f.Kind == LibraryManager.Domain.Store.FixtureKind.ShopWindow);
+            world.Layout.ClearFixture(window.Id);
+
+            WorldState loaded = SaveGameMapper.ToWorld(SaveGameMapper.ToData(world, new FixedClock().UtcNow));
+
+            CollectionAssert.AreEqual(
+                world.Layout.Placements.Select(p => $"{p.FixtureId}:{p.BookId}:{p.Quantity}").ToList(),
+                loaded.Layout.Placements.Select(p => $"{p.FixtureId}:{p.BookId}:{p.Quantity}").ToList());
+            Assert.AreEqual(world.Layout.Fixtures.Count, loaded.Layout.Fixtures.Count);
+            Assert.AreEqual(world.Layout.Fixtures.Last().Section, loaded.Layout.Fixtures.Last().Section);
+        }
+
+        [Test]
+        public void VersionFour_IsMigratedWithTheDefaultLayoutArranged()
+        {
+            SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.schemaVersion = 4;
+            data.world.fixtures = null;
+            data.world.placements = null;
+
+            WorldState world = SaveGameMapper.ToWorld(data);
+
+            Assert.AreEqual(SaveGameSchema.CurrentVersion, data.schemaVersion);
+            Assert.AreEqual(18, world.Layout.Fixtures.Count);
+            Assert.That(world.Layout.Placements.Sum(p => p.Quantity), Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void MoreDisplayedThanInStock_IsRejected()
+        {
+            SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);
+            data.world.placements[0].quantity += 1000;
+            Assert.Throws<SaveGameException>(() => SaveGameMapper.ToWorld(data));
+        }
+
+        [Test]
         public void CorruptCatalog_IsRejected()
         {
             SaveGameData data = SaveGameMapper.ToData(WorldState.CreateNew("Libros", 5), new FixedClock().UtcNow);

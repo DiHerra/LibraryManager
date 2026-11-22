@@ -3,6 +3,8 @@ using System.Globalization;
 using LibraryManager.Domain.Catalog;
 using LibraryManager.Domain.Common;
 using LibraryManager.Domain.Purchasing;
+using LibraryManager.Domain.Stock;
+using LibraryManager.Domain.Store;
 using System.Linq;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
@@ -51,6 +53,11 @@ namespace LibraryManager.Application.Saves
             if (data.schemaVersion == 3)
             {
                 MigrateV3ToV4(data);
+            }
+
+            if (data.schemaVersion == 4)
+            {
+                MigrateV4ToV5(data);
             }
 
             return data;
@@ -114,6 +121,29 @@ namespace LibraryManager.Application.Saves
             }
 
             data.schemaVersion = 4;
+        }
+
+        /// <summary>Monta el local por defecto y coloca automáticamente las existencias.</summary>
+        private static void MigrateV4ToV5(SaveGameData data)
+        {
+            try
+            {
+                BookCatalog catalog = SaveGameMapper.ToCatalog(data.world.catalog);
+                Inventory inventory = SaveGameMapper.ToInventory(data.world.stock, catalog);
+                StoreLayout layout = DefaultStoreLayout.Create();
+                DefaultStoreLayout.AutoArrange(layout, inventory, catalog, GameDate.FromDayNumber(data.world.dateDayNumber));
+                SaveGameMapper.WriteLayout(data.world, layout);
+            }
+            catch (System.ArgumentException exception)
+            {
+                throw new SaveGameException("La partida contiene datos no válidos: " + exception.Message, exception);
+            }
+            catch (KeyNotFoundException exception)
+            {
+                throw new SaveGameException("La partida hace referencia a algo que no existe: " + exception.Message, exception);
+            }
+
+            data.schemaVersion = 5;
         }
     }
 }

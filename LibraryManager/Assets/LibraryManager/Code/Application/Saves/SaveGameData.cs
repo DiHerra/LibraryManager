@@ -36,6 +36,33 @@ namespace LibraryManager.Application.Saves
         public List<StockLotData> stock = new List<StockLotData>();
         public List<PurchaseOrderData> orders = new List<PurchaseOrderData>();
         public int nextOrderId;
+
+        // Versión 5 (L05)
+        public List<FixtureData> fixtures = new List<FixtureData>();
+        public List<PlacementData> placements = new List<PlacementData>();
+    }
+
+    [Serializable]
+    public sealed class FixtureData
+    {
+        public int id;
+        public int kind;
+        public string name;
+        public int capacity;
+        /// <summary>Género de la sección; -1 si no es estantería.</summary>
+        public int section = -1;
+        public int x;
+        public int y;
+        public int width;
+        public int height;
+    }
+
+    [Serializable]
+    public sealed class PlacementData
+    {
+        public int fixtureId;
+        public int bookId;
+        public int quantity;
     }
 
     [Serializable]

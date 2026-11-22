@@ -7,6 +7,7 @@ using LibraryManager.Domain.Economy;
 using LibraryManager.Domain.Purchasing;
 using LibraryManager.Domain.Stock;
 using LibraryManager.Domain.Store;
+using LibraryManager.Domain.Store;
 using LibraryManager.Domain.Time;
 using LibraryManager.Domain.World;
 
@@ -19,7 +20,7 @@ namespace LibraryManager.Application.Saves
         {
             Guard.NotNull(world, nameof(world));
 
-            return new SaveGameData
+            SaveGameData data = new SaveGameData
             {
                 schemaVersion = SaveGameSchema.CurrentVersion,
                 savedAtUtc = savedAtUtc.ToString("o", CultureInfo.InvariantCulture),
@@ -46,6 +47,75 @@ namespace LibraryManager.Application.Saves
                     nextOrderId = world.Orders.NextId
                 }
             };
+            WriteLayout(data.world, world.Layout);
+            return data;
+        }
+
+        public static void WriteLayout(WorldData world, StoreLayout layout)
+        {
+            world.fixtures = layout.Fixtures.Select(f => new FixtureData
+            {
+                id = f.Id,
+                kind = (int)f.Kind,
+                name = f.Name,
+                capacity = f.Capacity,
+                section = f.Section.HasValue ? (int)f.Section.Value : -1,
+                x = f.X,
+                y = f.Y,
+                width = f.Width,
+                height = f.Height
+            }).ToList();
+            world.placements = layout.Placements.Select(p => new PlacementData
+            {
+                fixtureId = p.FixtureId,
+                bookId = p.BookId,
+                quantity = p.Quantity
+            }).ToList();
+        }
+
+        public static Inventory ToInventory(System.Collections.Generic.IEnumerable<StockLotData> stock, BookCatalog catalog)
+        {
+            if (stock == null)
+            {
+                throw new ArgumentException("Falta el inventario.");
+            }
+
+            return new Inventory(stock.Select(lot => ToLot(lot, catalog)).ToList());
+        }
+
+        private static StoreLayout ToLayout(WorldData world, BookCatalog catalog, Inventory inventory)
+        {
+            if (world.fixtures == null || world.placements == null)
+            {
+                throw new ArgumentException("Faltan los muebles de la tienda.");
+            }
+
+            var layout = new StoreLayout(
+                world.fixtures.Select(f => new Fixture(
+                    f.id,
+                    ToEnum<FixtureKind>(f.kind),
+                    f.name,
+                    f.capacity,
+                    f.section >= 0 ? ToEnum<Genre>(f.section) : (Genre?)null,
+                    f.x,
+                    f.y,
+                    f.width,
+                    f.height)).ToList(),
+                world.placements.Select(p =>
+                {
+                    catalog.GetBook(p.bookId);
+                    return new Placement(p.fixtureId, p.bookId, p.quantity);
+                }).ToList());
+
+            foreach (int bookId in layout.Placements.Select(p => p.BookId).Distinct())
+            {
+                if (layout.DisplayedQuantity(bookId) > inventory.Quantity(bookId))
+                {
+                    throw new ArgumentException($"Hay más ejemplares expuestos del libro {bookId} que en el inventario.");
+                }
+            }
+
+            return layout;
         }
 
         public static WorldEventData ToData(WorldEvent worldEvent)
@@ -238,7 +308,7 @@ namespace LibraryManager.Application.Saves
                     throw new ArgumentException("Faltan el inventario o los pedidos.");
                 }
 
-                var inventory = new Inventory(world.stock.Select(lot => ToLot(lot, catalog)).ToList());
+                Inventory inventory = ToInventory(world.stock, catalog);
                 var orders = new PurchaseOrderBook(world.orders.Select(order => ToOrder(order, catalog)).ToList(), world.nextOrderId);
 
                 return new WorldState(
@@ -249,7 +319,8 @@ namespace LibraryManager.Application.Saves
                     events,
                     catalog,
                     inventory,
-                    orders);
+                    orders,
+                    ToLayout(world, catalog, inventory));
             }
             catch (ArgumentException exception)
             {
