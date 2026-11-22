@@ -92,7 +92,7 @@ Avance 2026-11-19 (L03): pruebas nuevas de libro (3), catálogo (3), generador (
 
 ### L04. Stock, pedidos y devoluciones
 
-Estado: en curso, pendiente de validación en Unity. Dependencias: L03. Diseño: `docs/design/stock-and-purchasing.md`.
+Estado: cerrado el 2026-11-22. Dependencias: L03. Diseño: `docs/design/stock-and-purchasing.md`.
 
 - [x] Inventario por lotes con coste y fecha de entrada; salidas FIFO; fondo inicial de 150 títulos.
 - [x] Pedidos a distribuidoras con plazo, mínimo y límites; llegada como evento que pausa; pago al recibir.
@@ -100,9 +100,9 @@ Estado: en curso, pendiente de validación en Unity. Dependencias: L03. Diseño:
 - [x] Alertas de superventas sin stock, devoluciones a punto de vencer y libros parados.
 - [x] Guardado versión 4 con inventario y pedidos, y migración desde la versión 3.
 - [x] Pantallas: añadir al borrador desde el catálogo, pedidos por distribuidora, inventario con devolver y saldar, y avisos en la tienda.
-- [ ] Validación en Unity.
+- [x] Validación en Unity.
 
-Avance 2026-11-19 (L04): pruebas nuevas de inventario (4), compras (7), alertas (3), borrador de pedido (2) y guardado (3 más un caso de datos inválidos). Pendiente de compilar y ejecutar en Unity.
+Avance 2026-11-19 (L04): pruebas nuevas de inventario (4), compras (7), alertas (3), borrador de pedido (2) y guardado (3 más un caso de datos inválidos). Validado en Unity por Diego el 2026-11-22: 95/95 pruebas tras corregir `VersionTwo_IsMigratedWithAGeneratedCatalog`, que esperaba la versión 3 en lugar de la actual; recorrido de pedidos, devoluciones y saldos correcto.
 
 ### L05. Tienda: secciones, estanterías, mesas y escaparate
 
